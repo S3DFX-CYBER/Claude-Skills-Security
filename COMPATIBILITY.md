@@ -14,7 +14,7 @@ Secondary: Any runtime — the methodology is model-agnostic.
 
 1. Open a Claude Project
 2. Go to Project Instructions
-3. Paste the full contents of `Claude Skills/Security-Triage-Skills.md`
+3. Paste the full contents of `skills/security-triage/SKILL.md`
 4. The skill is now active for all conversations in that project
 
 ### Claude Code — Agentic
@@ -22,9 +22,9 @@ Secondary: Any runtime — the methodology is model-agnostic.
 ```bash
 # Clone and wire to your project
 git clone https://github.com/S3DFX-CYBER/Claude-Skills-Security.git
-mkdir -p /your/project/.claude/skills/
-cp "Claude-Skills-Security/Claude Skills/Security-Triage-Skills.md" \
-   /your/project/.claude/skills/security-triage.md
+mkdir -p /your/project/.claude/skills/security-triage/
+cp "Claude-Skills-Security/skills/security-triage/SKILL.md" \
+   /your/project/.claude/skills/security-triage/SKILL.md
 ```
 
 Claude Code agents will discover the skill via `.claude/skills/` on startup.
@@ -34,7 +34,7 @@ Claude Code agents will discover the skill via `.claude/skills/` on startup.
 ```python
 import anthropic
 
-with open("Claude Skills/Security-Triage-Skills.md") as f:
+with open("skills/security-triage/SKILL.md") as f:
     skill = f.read()
 
 client = anthropic.Anthropic()
@@ -55,7 +55,7 @@ message = client.messages.create(
 ```python
 from openai import OpenAI
 
-with open("Claude Skills/Security-Triage-Skills.md") as f:
+with open("skills/security-triage/SKILL.md") as f:
     skill = f.read()
 
 client = OpenAI()
@@ -89,7 +89,7 @@ Create `.cursorrules` in your project root:
 You are operating with the Security Triage Skill active.
 
 Follow the triage methodology defined in:
-https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/Claude%20Skills/Security-Triage-Skills.md
+https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/skills/security-triage/SKILL.md
 
 Key rules:
 - Apply the confidence gate (HIGH/MEDIUM/LOW) before every finding
@@ -126,7 +126,7 @@ Create `.github/copilot-instructions.md`:
 
 When reviewing code, workflow files, Dockerfiles, or dependencies for security issues,
 apply the confidence-gated triage methodology from:
-Claude-Skills-Security/Claude Skills/Security-Triage-Skills.md
+Claude-Skills-Security/skills/security-triage/SKILL.md
 
 Confidence gate:
 - HIGH: pattern confirmed + attacker input path confirmed + exploitable in context
@@ -142,12 +142,12 @@ Output format: structured triage report (FINDING / AM I AFFECTED / IMPACT / THE 
 
 ```bash
 # Single invocation
-gemini -s "$(cat 'Claude Skills/Security-Triage-Skills.md')" \
+gemini -s "$(cat 'skills/security-triage/SKILL.md')" \
   "Triage this GitHub Actions workflow:\n\n$(cat .github/workflows/ci.yml)"
 
 # As a shell function
 triage() {
-  local skill="$(cat '/path/to/Claude Skills/Security-Triage-Skills.md')"
+  local skill="$(cat '/path/to/skills/security-triage/SKILL.md')"
   gemini -s "$skill" "Triage this: $1"
 }
 
@@ -164,7 +164,7 @@ triage "CVE-2024-21536 — is this affecting my Express app?"
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage
 
-with open("Claude Skills/Security-Triage-Skills.md") as f:
+with open("skills/security-triage/SKILL.md") as f:
     skill = f.read()
 
 llm = ChatAnthropic(model="claude-sonnet-4-20250514")
@@ -186,7 +186,7 @@ def triage_node(state):
 from crewai import Agent, Task
 from langchain_anthropic import ChatAnthropic
 
-with open("Claude Skills/Security-Triage-Skills.md") as f:
+with open("skills/security-triage/SKILL.md") as f:
     skill = f.read()
 
 security_researcher = Agent(
@@ -214,7 +214,7 @@ The skill works as a `system` message with any OpenAI-compatible endpoint
 ```python
 import openai
 
-with open("Claude Skills/Security-Triage-Skills.md") as f:
+with open("skills/security-triage/SKILL.md") as f:
     skill = f.read()
 
 client = openai.OpenAI(

@@ -1,0 +1,42 @@
+name: Bug or false negative
+description: Wrong verdict, missed finding, or malformed output
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong
+      options:
+        - False negative — a real finding was missed
+        - False negative — a real finding was buried in NOTES
+        - Wrong severity
+        - Wrong track
+        - Malformed output (section missing, unparseable)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Artifact
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What it produced
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What it should have produced, and why
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Skill version
+      description: From the frontmatter `metadata.version`
+      placeholder: 1.2.0

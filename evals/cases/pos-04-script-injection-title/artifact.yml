@@ -1,0 +1,7 @@
+name: triage
+on: pull_request
+jobs:
+  greet:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Thanks for PR: ${{ github.event.pull_request.title }}"

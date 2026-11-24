@@ -7,6 +7,45 @@ Methodology: Exploitability-first triage. Every change is grounded in field find
 
 ---
 
+## [1.2.0] — 2026-11-25
+
+### Added
+- **Track F — Secrets & Credential Exposure.** Live-vs-placeholder triage, reachability
+  (bundle > repo > log > CI variable), blast radius over C/I/A, and a rotate-first fix order.
+- **Track B per-language sink tables** — JS/TS, Python, Java, Go, PHP, Ruby, Rust, SQL.
+  Includes the constant-feed rule: a dangerous sink fed by a literal is not a finding.
+- **BLIND SPOTS section** — mandatory on every report, including clean results. Silence on
+  a real bug is the failure mode the gate creates; this closes it.
+- **Step 5 — Action Mapping and Disclosure.** Severity → action line, interim mitigation,
+  and the third-party reporting path (advisory, CNA, 90-day window).
+- **Repo-Scale Mode** — diff-first auditing, one track at a time, and a mandatory scope
+  manifest stating how many files were actually read.
+- **`examples/`** — three input/output pairs, including a false-positive case showing six
+  scanner flags correctly suppressed with reasoning.
+- **`evals/`** — 12-case labelled corpus (6 positive, 6 negative) with `expected.yaml`,
+  a manual protocol that works on any runtime, and published metrics.
+- **`CONTRIBUTING.md`, `SECURITY.md`, issue templates** (bug, false positive, new track).
+- **CI** — fails on drift between the canonical skill and the generated copy.
+
+### Changed
+- **Skill moved to `skills/security-triage/SKILL.md`** with `.claude/skills/` as a
+  generated mirror. Previously shipped as a flat `.claude/skills/security-triage.md`,
+  which Claude Code does not discover — one directory per skill, containing `SKILL.md`.
+- **Frontmatter rewritten** to fields Claude Code reads (`name`, `description`,
+  `when_to_use`, `license`); custom keys moved under `metadata:`. `tracks:` and `author:`
+  were silently ignored before.
+- **`Claude Skills/` renamed to `skills/`** — the space broke URLs, `curl` and shell
+  one-liners.
+- README restructured around the gate, the examples, and the evals.
+
+### Fixed
+- **`GHSA-wxm3-64fx-cmx9` was listed as a second pedigree finding.** It is the advisory
+  that carries CVE-2026-40316 — one vulnerability, not two. Merged, with NVD linked.
+- Two copies of the skill had already drifted (385 vs 403 lines, frontmatter on one only).
+  Single source of truth plus a CI drift check.
+
+---
+
 ## [1.1.0] — 2026-04-20
 
 ### Added

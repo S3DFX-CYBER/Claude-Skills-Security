@@ -1,0 +1,39 @@
+name: False positive
+description: The skill reported something that is not exploitable
+labels: ["false-positive"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The gate is the product. A false positive is a bug in the gate, not a nitpick.
+        Please include enough that this can become an eval case.
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Artifact
+      description: The input you gave it. Redact secrets and internal hostnames.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: reported
+    attributes:
+      label: What it reported
+      description: Paste the finding, or the headline verdict and severity.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it is not exploitable
+      description: |
+        The reasoning that makes this a false positive — the constant, the upstream
+        sanitiser, the missing trust boundary. Be specific; "it looked fine" is not enough
+        to change a rule.
+    validations:
+      required: true
+  - type: input
+    id: runtime
+    attributes:
+      label: Runtime and model
+      placeholder: Claude Code / claude-sonnet-4-5

@@ -1,0 +1,15 @@
+name: regenerate-migrations
+on:
+  pull_request_target:
+    types: [labeled]
+permissions: write-all
+jobs:
+  regen:
+    if: github.event.label.name == 'regenerate-migrations'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-head
+          git show pr-head:website/models.py > website/models.py
+          python manage.py makemigrations

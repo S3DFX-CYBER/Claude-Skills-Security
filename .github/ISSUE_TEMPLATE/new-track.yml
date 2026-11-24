@@ -1,0 +1,31 @@
+name: New track or detection rule
+description: A gap in coverage, with the heuristic that closes it
+labels: ["enhancement"]
+body:
+  - type: input
+    id: track
+    attributes:
+      label: Track or rule name
+    validations:
+      required: true
+  - type: textarea
+    id: heuristic
+    attributes:
+      label: Detection heuristic
+      description: |
+        What pattern indicates this, and what makes it HIGH confidence rather than MEDIUM?
+        This is the part that matters — a topic name is not a rule.
+    validations:
+      required: true
+  - type: textarea
+    id: fp
+    attributes:
+      label: The false-positive trap
+      description: What does this look like when it is *not* a vulnerability?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: A CVE, advisory, disclosure, or real case where this mattered.

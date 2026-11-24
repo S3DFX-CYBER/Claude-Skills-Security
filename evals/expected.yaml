@@ -1,0 +1,100 @@
+# Ground truth for the eval corpus.
+# Run the protocol in README.md, then compare the skill's verdict against each entry.
+#
+# finding: true  -> a HIGH or MEDIUM report is required
+# finding: false -> any HIGH/MEDIUM finding is a false positive, scored as a failure
+#
+# must_mention: strings that should appear in the output (case-insensitive)
+# must_not:     strings whose presence indicates a wrong verdict
+
+cases:
+
+  - id: pos-01-pr-target-git-show
+    finding: true
+    track: D
+    confidence: HIGH
+    severity: critical
+    must_mention: ["pull_request_target", "git show", "GITHUB_TOKEN"]
+    must_not: ["UI:N"]
+
+  - id: pos-02-llm-output-exec
+    finding: true
+    track: C
+    confidence: HIGH
+    severity: critical
+    must_mention: ["LLM05", "shell=True"]
+    must_not: []
+
+  - id: pos-03-secret-in-dockerfile
+    finding: true
+    track: F
+    confidence: HIGH
+    severity: high
+    must_mention: ["rotate", "layer"]
+    must_not: []
+
+  - id: pos-04-script-injection-title
+    finding: true
+    track: D
+    confidence: HIGH
+    severity: high
+    must_mention: ["CWE-78", "pull_request.title"]
+    must_not: ["Critical"]
+
+  - id: pos-05-sql-concat
+    finding: true
+    track: B
+    confidence: HIGH
+    severity: critical
+    must_mention: ["CWE-89", "parameterised"]
+    must_not: []
+
+  - id: pos-06-live-key-committed
+    finding: true
+    track: F
+    confidence: HIGH
+    severity: critical
+    must_mention: ["rotate", "ghp_"]
+    must_not: []
+
+  - id: neg-01-innerhtml-config
+    finding: false
+    track: B
+    confidence: LOW
+    must_mention: ["config"]
+    must_not: ["XSS at HIGH", "Critical"]
+
+  - id: neg-02-mark-safe-constant
+    finding: false
+    track: B
+    confidence: LOW
+    must_mention: ["constant"]
+    must_not: ["HIGH"]
+
+  - id: neg-03-transitive-cve-unused
+    finding: false
+    track: A
+    confidence: LOW
+    must_mention: ["transitive", "not imported"]
+    must_not: ["Critical", "9.8"]
+
+  - id: neg-04-pr-target-no-checkout
+    finding: false
+    track: D
+    confidence: LOW
+    must_mention: ["no PR code", "SHA"]
+    must_not: ["Critical", "HIGH"]
+
+  - id: neg-05-dockerfile-hardening
+    finding: false
+    track: E
+    confidence: LOW
+    must_mention: ["USER", "digest"]
+    must_not: ["Critical", "HIGH"]
+
+  - id: neg-06-literal-shell
+    finding: false
+    track: B
+    confidence: LOW
+    must_mention: ["literal"]
+    must_not: ["HIGH", "Critical"]

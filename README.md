@@ -1,200 +1,212 @@
-# Claude-Skills-Security
+# security-triage
 
-<div align="center">
-
-**A production-grade security triage skill for AI agents.**
-Confidence-gated. Context-aware. No false-positive noise.
+**A confidence-gated security triage skill for AI agents.** Six tracks. A gate that
+suppresses false positives before severity is assigned. Output a developer can act on.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Claude Skills](https://img.shields.io/badge/Claude-Skills%20Compatible-orange)](https://claude.ai)
-[![OWASP](https://img.shields.io/badge/OWASP-LLM%20Top%2010-blue)](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
-[![Agent Ready](https://img.shields.io/badge/Agent-Ready-brightgreen)](AGENTS.md)
-
-</div>
+[![Claude Code skill](https://img.shields.io/badge/Claude%20Code-SKILL.md-orange)](https://code.claude.com/docs/en/skills)
+[![OWASP LLM Top 10](https://img.shields.io/badge/OWASP-LLM%20Top%2010-blue)](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
+[![Evals](https://img.shields.io/badge/evals-12%20labelled%20cases-brightgreen)](evals/)
 
 ---
 
-## What this is
+## The problem
 
-Security scanners find patterns. This skill answers what scanners cannot:
+A scanner gives you 47 findings. Four are real. You do not know which four, so you either
+read all 47 or you ignore all 47. Both are the wrong answer, and both are expensive.
 
-- **Is this actually exploitable** in this specific deployment context?
-- **Does the CVSS base score reflect real-world risk** here — or is it overstated?
-- **Is this an LLM model-level issue** (not fixable in code) **or application-level** (fixable)?
-- **Is this CI/CD pattern a real attack vector** or a misconfigured false alarm?
-- **What can an attacker concretely do**, and what is the minimum viable fix?
+This skill answers the question scanners cannot:
 
-The difference between a scanner and a researcher is **judgment**. This skill encodes that judgment.
+- **Is this exploitable** in this deployment, or is it a pattern with nothing behind it?
+- **Does the CVSS base score reflect real risk here** — or is a 9.8 on an internal-only
+  service less urgent than a 5.4 on a public API with open registration?
+- **Is this model-level or application-level** — i.e. can it be fixed in code at all?
+- **What can an attacker actually do**, and what is the smallest change that stops it?
 
----
-
-## The core mechanic: Confidence Gating
-
-Every finding is blocked behind a confidence gate before severity is assigned.
-
-```
-HIGH    Vulnerable pattern confirmed + attacker-controlled input confirmed
-        + exploitable in the described context.
-        → Full triage report produced.
-
-MEDIUM  Vulnerable pattern found, but input source unclear or exploitability
-        depends on context not fully visible.
-        → Triage report produced with explicit caveat.
-
-LOW     Theoretical risk only. Multiple unlikely conditions required.
-        → NOT reported as a finding. Listed in Notes only.
-```
-
-This is the single most important feature. It's why this skill doesn't produce noise.
+The difference between a scanner and a triager is judgment. This encodes the judgment.
 
 ---
 
-## Coverage: 5 Triage Tracks
+## The gate
 
-| Track | Scope |
-|-------|-------|
-| **A — CVE / Scanner Alert** | CVE IDs, Dependabot, Snyk, npm audit, pip-audit, Trivy, SARIF |
-| **B — Code Snippet** | Any language — data flow tracing, sink reachability, upstream sanitization checks |
-| **C — LLM Application Security** | Prompt injection, RAG pipelines, AI agents, OWASP LLM Top 10 2025 |
-| **D — CI/CD & GitHub Actions** | Script injection (CWE-78), `pull_request_target` RCE, SHA pinning, permissions scoping |
-| **E — Container & Infrastructure** | Dockerfile, docker-compose, k8s YAML, Helm — root user, floating tags, secret exposure |
+Every finding passes a confidence gate **before** severity is assigned.
 
-Multiple tracks can apply simultaneously. The skill classifies before triaging.
+| Confidence | Condition | Output |
+|---|---|---|
+| **HIGH** | Vulnerable pattern confirmed **and** attacker-controlled input confirmed **and** exploitable in this context | Full triage report |
+| **MEDIUM** | Pattern found, but input source unclear or exploitability context-dependent | Report with explicit caveat |
+| **LOW** | Theoretical, or best-practice deviation with no exploit path | **Not a finding.** Notes section only |
 
----
+This is the whole product. A dangerous sink fed by a constant is not a vulnerability, and
+reporting it as one is how security tooling loses its audience.
 
-## Output format
-
-Every HIGH/MEDIUM finding produces a structured triage report:
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔍 SECURITY TRIAGE REPORT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-FINDING
-  Title      : [What is wrong — not just the CVE ID]
-  Track      : [A–E with label]
-  Confidence : [HIGH / MEDIUM — one-line reason why]
-  Severity   : [🔴 Critical / 🟠 High / 🟡 Medium / 🔵 Low]
-  CVSS       : [X.X — full CVSS:3.1 vector with component reasoning]
-
-CLASSIFICATION
-  OWASP / CWE / WSTG / ASVS Level
-
-WHAT IS THIS?
-  Plain English. No assumed knowledge.
-
-AM I AFFECTED?
-  Specific conditions. Concrete attacker requirements.
-  CVSS context adjustment — does base score overstate or understate here?
-
-IMPACT
-  Concrete attacker capabilities. Specific, not generic.
-
-THE FIX
-  Copy-paste ready. Diff format. Minimum viable fix first.
-
-VERIFY IT'S FIXED
-  One runnable check — grep, command, or test assertion.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+See it work: **[examples/02-false-positive](examples/02-false-positive/)** — six scanner
+flags, zero findings, and the reason for each.
 
 ---
 
-## Real-world pedigree
+## Quick start
 
-The CI/CD detection logic in Track D is derived from original CVE research:
-
-- **CVE-2026-40316** — `pull_request_target` + `git show` RCE in OWASP BLT (CVSS 8.8, CWE-94/95). Patched in BLT v2.1.1. The skill encodes the exact detection heuristic and CVSS reasoning used in this advisory.
-- **GHSA-wxm3-64fx-cmx9** — Chained RCE via `pull_request_target` + Django model import. High severity.
-This isn't a prompt template. It's field-tested triage methodology.
-
----
-
-## Installation
-
-### Claude (native)
-
-Copy `Claude Skills/Security-Triage-Skills.md` into your Claude Project as a Project instruction, or reference it as a skill file.
-
-For the `.claude/skills/` format (Claude Code / agentic workflows):
+### Claude Code
 
 ```bash
 git clone https://github.com/S3DFX-CYBER/Claude-Skills-Security.git
-cp "Claude Skills/Security-Triage-Skills.md" /your/project/.claude/skills/security-triage.md
+mkdir -p .claude/skills
+cp -r Claude-Skills-Security/skills/security-triage .claude/skills/
 ```
 
-### OpenAI Codex / Responses API
+That gives you `.claude/skills/security-triage/SKILL.md` — the layout Claude Code
+discovers. Then `/security-triage`, or just paste a workflow file and ask.
+
+For every project on the machine, use `~/.claude/skills/` instead.
+
+### Claude.ai
+
+Upload `skills/security-triage/SKILL.md` as a skill, or paste it into a Project's
+instructions.
+
+### Any other runtime
+
+The skill is plain markdown with YAML frontmatter. Feed it as a system prompt or
+instructions block:
 
 ```python
-with open("Claude Skills/Security-Triage-Skills.md") as f:
-    skill = f.read()
+from pathlib import Path
+skill = Path("skills/security-triage/SKILL.md").read_text()
 
-response = client.responses.create(
-    model="codex-mini-latest",
-    instructions=skill,
-    input="Triage this workflow file: ..."
+# OpenAI / Codex
+client.responses.create(model="codex-mini-latest", instructions=skill, input=artifact)
+
+# Any OpenAI-compatible API
+client.chat.completions.create(
+    model="...",
+    messages=[{"role": "system", "content": skill},
+              {"role": "user", "content": artifact}],
 )
 ```
 
-### Cursor / Windsurf / Copilot (Rules)
-
-Add to `.cursorrules` or `.github/copilot-instructions.md`:
-
-```
-Follow the triage methodology defined in:
-Claude Skills/Security-Triage-Skills.md
-Apply confidence gating before every finding.
-```
-
-### Gemini CLI
-
 ```bash
-gemini -s "$(cat 'Claude Skills/Security-Triage-Skills.md')" \
-  "Triage this Dockerfile: ..."
+# Gemini CLI
+gemini -s "$(cat skills/security-triage/SKILL.md)" "Triage this Dockerfile: $(cat Dockerfile)"
 ```
-
-### Any agent runtime
-
-The skill is plain markdown. If your agent accepts a system prompt or context file, it works. See [AGENTS.md](AGENTS.md) for invocation contracts and agentic discovery.
-
----
-
-## Compatibility
 
 | Runtime | Method | Status |
-|---------|--------|--------|
-| Claude (claude.ai / Claude Code) | Native `.claude/skills/` | ✅ Primary |
-| OpenAI Codex | `instructions` parameter | ✅ Tested |
-| Cursor | `.cursorrules` | ✅ Tested |
-| Windsurf | Rules file | ✅ Tested |
-| Gemini CLI | `-s` system prompt flag | ✅ Tested |
-| Any OpenAI-compatible API | `system` message | ✅ Compatible |
-| GitHub Copilot | `.github/copilot-instructions.md` | ✅ Tested |
+|---|---|---|
+| Claude Code | `.claude/skills/security-triage/SKILL.md` | Primary |
+| claude.ai | Skill upload or Project instructions | Tested |
+| OpenAI Codex / Responses API | `instructions` | Tested |
+| Any OpenAI-compatible API | `system` message | Compatible |
+| Cursor / Windsurf | rules file referencing the SKILL.md | Tested |
+| GitHub Copilot | `.github/copilot-instructions.md` | Tested |
+| Gemini CLI | `-s` system prompt | Tested |
+
+Details and per-runtime quirks: [COMPATIBILITY.md](COMPATIBILITY.md).
+Agent discovery and invocation contracts: [AGENTS.md](AGENTS.md).
 
 ---
 
-## What this is NOT
+## Coverage — six tracks
 
-- Not a vulnerability scanner. Run your scanners first, feed the output here.
-- Not a compliance checklist. This is exploitability-focused triage.
-- Not a generic "act as a security expert" prompt. The confidence gate and structured output format are the entire point.
+| Track | Input | Focus |
+|---|---|---|
+| **A — CVE / Scanner Alert** | CVE IDs, Dependabot, Snyk, npm audit, pip-audit, Trivy, SARIF | Is the vulnerable function actually called? Does the base score hold here? |
+| **B — Code Snippet** | Any language | Source-to-sink tracing, upstream sanitisation, per-language sink tables |
+| **C — LLM Application Security** | Prompts, RAG pipelines, agents, tool calls | OWASP LLM Top 10, model-level vs application-level, indirect injection |
+| **D — CI/CD & GitHub Actions** | `.github/workflows/*.yml` | Script injection (CWE-78), `pull_request_target` RCE, SHA pinning, permissions |
+| **E — Container & Infrastructure** | Dockerfile, compose, k8s, Helm | Root user, floating tags, secrets in layers, capabilities |
+| **F — Secrets & Credential Exposure** | gitleaks/trufflehog output, `.env`, bundles | Is it live, where does it reach, what is the blast radius |
+
+Tracks compose. A leaked key in a Dockerfile layer is E and F; the report says both.
 
 ---
+
+## What the output looks like
+
+Every HIGH/MEDIUM finding gets the same structure — plain English first, jargon explained
+inline, and a fix that is a diff rather than advice.
+
+```
+FINDING          what is wrong (mechanism, not the CVE ID)
+  Track · Confidence · Severity · CVSS vector with per-component reasoning
+CLASSIFICATION   OWASP · CWE · ASVS level
+WHAT IS THIS?    the vulnerability class, for a developer who has not met it
+AM I AFFECTED?   the conditions, and whether the base score overstates risk here
+IMPACT           concrete attacker capability, not "could execute code"
+BLIND SPOTS      what I could not see that would change this verdict
+THE FIX          diff. minimum viable fix first
+VERIFY IT'S FIXED  one runnable check
+REFERENCES       3-5 links, directly relevant
+ACTION           Critical/High/Medium/Low → what to do, and the interim mitigation
+```
+
+`AM I AFFECTED` and `BLIND SPOTS` are the two sections that make this triage rather than
+scanning. Full worked examples in [examples/](examples/).
+
+---
+
+## Evals
+
+Twelve labelled cases — six vulnerabilities, six false-positive traps. Scored on recall,
+false-positive rate, track accuracy and severity agreement.
+
+```bash
+ls evals/cases/
+cat evals/README.md    # protocol, ~5 minutes per full run
+```
+
+The negatives are the point. Any model produces the six positives; the skill earns its
+keep on the six it declines to report. Publish your number when you run it — an unmeasured
+claim is just a claim.
+
+---
+
+## Pedigree
+
+Track D's detection logic comes from original research:
+
+**CVE-2026-40316** / [GHSA-wxm3-64fx-cmx9](https://github.com/OWASP-BLT/BLT/security/advisories/GHSA-wxm3-64fx-cmx9)
+— `pull_request_target` + `git show` → RCE in OWASP BLT. CVSS 8.8, CWE-94/95, patched in
+v2.1.1. [NVD entry](https://nvd.nist.gov/vuln/detail/CVE-2026-40316).
+
+The skill encodes the heuristic that found it, and the CVSS reasoning that produced 8.8
+rather than 9.x: a maintainer must apply a label, so `UI:R` — the interaction is real, and
+it is low-barrier, and both facts belong in the score.
+
+---
+
+## What this is not
+
+- **Not a scanner.** Run yours first; feed the output here. Semgrep and CodeQL find
+  patterns faster than any model. This decides what the patterns mean.
+- **Not a compliance checklist.** Exploitability-focused. It will not tell you whether you
+  pass an audit.
+- **Not "act as a security expert".** The gate and the refusal to report are the entire
+  mechanism.
+
+---
+
+## Repository layout
+
+```
+skills/security-triage/SKILL.md           the skill — the only file you edit
+.claude/skills/security-triage/SKILL.md   generated copy for Claude Code (make sync)
+examples/                                 three input/output pairs
+evals/                                    labelled corpus + scoring protocol
+AGENTS.md                                 agent discovery and invocation contracts
+COMPATIBILITY.md                          per-runtime configuration
+```
 
 ## Contributing
 
-Issues and PRs welcome. If you have a real-world finding that exposed a gap in the triage logic, open an issue with the finding details (redacted as needed). The methodology improves from field cases.
+A real finding that exposed a gap in the triage logic is worth more than a rewrite. Open an
+issue with the artifact (redacted) and what the skill got wrong. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
----
+## Security
 
-## Author
+Found a problem with the skill itself — dangerous advice, a missing check, a pattern it
+should refuse? See [SECURITY.md](SECURITY.md). Do not open a public issue.
 
-**S3DFX-CYBER** — Security researcher. CVE-2026-40316. OWASP LLM Top 10 v2 Co-Lead (LLM:08) 
+## License
 
----
-
-<div align="center">
-<sub>Designed for Claude Skills. Compatible with any agent runtime that reads markdown context.</sub>
-</div>
+MIT. Author: **S3DFX-CYBER**.
