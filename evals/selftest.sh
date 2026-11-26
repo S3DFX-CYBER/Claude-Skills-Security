@@ -62,8 +62,15 @@ fail() { printf '  FAIL — %s\n' "$1"; exit 1; }
 
 echo "selftest: correct output scores 12/12"
 ./evals/run.sh --agent "$TMP/good.sh" --label _selftest >/dev/null
-python3 evals/score.py --results evals/results/_selftest >/dev/null \
-  && pass || fail "a correct agent does not score 12/12"
+out=$(python3 evals/score.py --results evals/results/_selftest 2>&1) \
+  || fail "a correct agent does not score 12/12"
+for metric in "recall             6/6" "false positives    0/6" "severity agreement 6/6"; do
+  case "$out" in
+    *"$metric"*) : ;;
+    *) fail "expected '$metric' in the summary" ;;
+  esac
+done
+pass
 
 echo "selftest: clean result inside the report banner is not a finding"
 ./evals/run.sh --agent "$TMP/good.sh" --label _selftest --case neg-01-innerhtml-config >/dev/null
@@ -74,11 +81,15 @@ case "$out" in
   *) pass ;;
 esac
 
-echo "selftest: an agent that flags everything is caught"
+echo "selftest: an agent that flags everything is caught as 6/6 false positives"
 rm -rf evals/results/_selftest
 ./evals/run.sh --agent "$TMP/bad.sh" --label _selftest >/dev/null
-python3 evals/score.py --results evals/results/_selftest >/dev/null \
-  && fail "an agent that flags everything passed" || pass
+out=$(python3 evals/score.py --results evals/results/_selftest 2>&1 || true)
+case "$out" in
+  *"false positives    6/6"*) pass ;;
+  *"false positives"*)        fail "wrong false-positive count — negatives are no longer detected" ;;
+  *)                          fail "scorer crashed or printed nothing useful" ;;
+esac
 
 echo "selftest: a finding buried in NOTES is caught"
 rm -rf evals/results/_selftest

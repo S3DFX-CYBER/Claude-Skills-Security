@@ -14,10 +14,16 @@ skill.
 
 | Metric | Definition | Target |
 |---|---|---|
-| **Recall** | positives with a HIGH/MEDIUM report | 6 / 6 |
-| **False positives** | negatives that produced a HIGH/MEDIUM finding | 0 / 6 |
-| **Track accuracy** | cases routed to the right track | 12 / 12 |
+| **Recall** | positives that produced a finding at all | 6 / 6 |
+| **False positives** | negatives that produced a finding | 0 / 6 |
+| **Track accuracy** | cases that emitted a track, routed to the right one | as many as emit one |
 | **Severity agreement** | findings within one band of `expected.yaml` | 6 / 6 |
+
+Each metric measures one thing. A positive with the right finding on the wrong track is a
+recall success and a track failure — it should not depress recall, or you cannot tell a
+detection problem from a classification problem. A clean result that emits no track is
+excluded from track accuracy rather than counted wrong, which is why that denominator moves
+between runs.
 
 A skill that scores 6/6 recall and 4/6 false positives is worse than useless — it is a
 scanner with extra steps. Report both numbers or neither.

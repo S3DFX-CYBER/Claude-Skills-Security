@@ -144,15 +144,18 @@ def score_case(case, results_dir, verbose):
     if not expect_finding and reported:
         problems.append("expected no finding, got one (false positive)")
 
+    sev_ok = None
     if expect_finding:
         want_track = case.get("track")
         if want_track and track != want_track:
             problems.append(f"track {track or '?'} != {want_track}")
         want_sev = case.get("severity")
         if want_sev and severity:
-            if abs(BANDS.get(severity, 0) - BANDS.get(want_sev, 0)) > 1:
+            sev_ok = abs(BANDS.get(severity, 0) - BANDS.get(want_sev, 0)) <= 1
+            if not sev_ok:
                 problems.append(f"severity {severity} more than one band from {want_sev}")
         elif want_sev and not severity:
+            sev_ok = False
             problems.append("no severity line found")
 
     # must_not is checked against the text with the clean notice removed: that sentence
@@ -174,6 +177,7 @@ def score_case(case, results_dir, verbose):
         "path": str(path),
         "reported": reported,
         "severity": severity,
+        "sev_ok": sev_ok,
         "track": track,
     }
 
@@ -194,15 +198,22 @@ def main():
     cases = yaml.safe_load(pathlib.Path(args.expected).read_text())["cases"]
     rows = [score_case(c, results_dir, args.verbose) for c in cases]
 
-    pos = [r for r, c in zip(rows, cases) if c.get("finding")]
-    neg = [r for r, c in zip(rows, cases) if not c.get("finding")]
-    recall = sum(1 for r in pos if r["status"] == "pass")
-    fp = sum(1 for r in neg if r.get("reported"))
+    pos = [(r, c) for r, c in zip(rows, cases) if c.get("finding")]
+    neg = [(r, c) for r, c in zip(rows, cases) if not c.get("finding")]
+
+    # Each metric measures one property. A positive with the right finding but the wrong
+    # track is a recall success and a track failure — not a recall failure.
+    recall = sum(1 for r, _ in pos if r.get("reported"))
+    fp = sum(1 for r, _ in neg if r.get("reported"))
     missing = [r for r in rows if r["status"] == "MISSING"]
-    track_ok = sum(
-        1 for r, c in zip(rows, cases)
-        if c.get("finding") and r.get("track") == c.get("track")
-    )
+
+    # Track accuracy covers every case that actually emitted a track, negatives included:
+    # a clean result routed to the wrong track is still a routing error.
+    tracked = [(r, c) for r, c in zip(rows, cases) if r.get("track")]
+    track_ok = sum(1 for r, c in tracked if r["track"] == c.get("track"))
+
+    graded = [(r, c) for r, c in pos if c.get("severity")]
+    sev_ok = sum(1 for r, _ in graded if r.get("sev_ok"))
 
     if args.md:
         print("| Case | Expect | Got | Status |")
@@ -232,7 +243,9 @@ def main():
     print(f"missing results    {len(missing)}")
     print(f"recall             {recall}/{len(pos)}")
     print(f"false positives    {fp}/{len(neg)}")
-    print(f"track accuracy     {track_ok}/{len(pos)}")
+    print(f"track accuracy     {track_ok}/{len(tracked)}"
+          f"   ({len(tracked)}/{total} emitted a track)")
+    print(f"severity agreement {sev_ok}/{len(graded)}")
     print()
 
     if len(missing) == total:
