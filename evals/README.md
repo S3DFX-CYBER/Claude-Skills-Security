@@ -63,10 +63,14 @@ Flags move between releases. Check `--help` once; the contract above is what mat
 ```sh
 #!/bin/sh
 # /tmp/agent.sh — reads the prompt on stdin, prints the answer on stdout
-tmp=$(mktemp); cat > "$tmp"
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT INT TERM
+cat > "$tmp"
 your-agent --prompt-file "$tmp" --no-interactive
-rm -f "$tmp"
 ```
+
+Use a `trap`, not a trailing `rm`. A trailing `rm` succeeds even when the agent failed, so
+the wrapper returns 0 and `run.sh` records a broken run as a good one.
 
 ```bash
 ./evals/run.sh --agent /tmp/agent.sh --label my-agent
@@ -77,12 +81,16 @@ rm -f "$tmp"
 ```bash
 # 1. Your real agent
 ./evals/run.sh --agent "claude -p" --label claude
-python3 evals/score.py --verbose
+python3 evals/score.py --results evals/results/claude --verbose
 
 # 2. A second model, to see whether the gate is the skill or the model
 ./evals/run.sh --agent "ollama run qwen2.5-coder" --label qwen
-python3 evals/score.py --verbose
+python3 evals/score.py --results evals/results/qwen --verbose
 ```
+
+Score one label at a time. With more than one run present, `score.py` refuses to guess which
+one you meant — picking the alphabetically first directory would silently score the wrong
+model.
 
 If the gate holds on one model and collapses on the other, that is a finding about the
 skill's robustness, not about the weaker model.
@@ -110,9 +118,18 @@ done
   (`must_not`) — checked after stripping the "No HIGH or MEDIUM findings" sentence, which
   would otherwise trip every negative on its own correct output
 
+A finding is a `FINDING` section containing a `Confidence` field. The report banner proves
+nothing — a correct clean result is wrapped in the same `SECURITY TRIAGE REPORT` header (see
+[`examples/02-false-positive`](../examples/02-false-positive/output.md)). Text inside `NOTES`
+is excluded, because the protocol counts a finding confined to NOTES as a false negative.
+
 It cannot judge whether the reasoning was right. That is what `--verbose` and your eyes are
 for. When a case fails, the first question is whether the case or the scorer is wrong — both
 are code, and both have been wrong before.
+
+**A partial run is not a score.** If any case has no result — an interrupted run, a
+`--case` invocation — the scorer exits non-zero and says so. Quote a number only after the
+full corpus has run.
 
 ## Scoring
 
