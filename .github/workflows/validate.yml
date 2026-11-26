@@ -76,6 +76,16 @@ jobs:
             exit 1
           fi
 
+      - name: Install eval dependencies
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Eval harness works
+        run: |
+          sh -n evals/run.sh
+          sh -n evals/selftest.sh
+          ./evals/run.sh --dry-run > /dev/null
+          ./evals/selftest.sh
+
       - name: Installer works for every documented target
         run: |
           sh -n install.sh

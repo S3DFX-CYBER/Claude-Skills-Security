@@ -24,16 +24,70 @@ scanner with extra steps. Report both numbers or neither.
 
 ## Running it
 
-The protocol is deliberately manual: it must work on any runtime, not just one vendor's
-harness.
+```bash
+./evals/run.sh --agent "claude -p"                 # results land in evals/results/<label>/
+python3 evals/score.py --verbose                   # score them
+```
 
-1. Install the skill for your runtime (see the main README).
-2. For each case directory, feed `artifact.*` to the agent as the user message, with no
-   hint about what to look for. Do not name the track. Do not say "is this vulnerable".
-3. Save the full output to `evals/results/<runtime>/<case-id>.md`.
-4. Score against `expected.yaml`.
+`run.sh` walks every case, builds one prompt per case (the skill, then the artifact, with no
+hint about what to look for), pipes it to your agent command, and saves the output. The only
+requirement for the agent command is that it **reads the prompt on stdin and writes the
+answer to stdout**.
 
-Run everything from the repository root:
+```bash
+./evals/run.sh --dry-run                           # preview: 12 prompts, nothing executed
+./evals/run.sh --agent "claude -p" --case pos-05-sql-concat
+./evals/run.sh --agent "ollama run qwen2.5-coder" --label qwen-coder
+```
+
+The case id is deliberately **not** put in the prompt. Ids like `neg-01-innerhtml-config`
+telegraph the expected answer, and a model that reads them is being told the verdict.
+
+## Command sheet
+
+Flags move between releases. Check `--help` once; the contract above is what matters.
+
+**Reads stdin, writes stdout — works as-is:**
+
+| Tool | Command |
+|---|---|
+| Claude Code | `claude -p` |
+| Gemini CLI | `gemini -p "$(cat)"` (see wrapper below) |
+| Ollama | `ollama run qwen2.5-coder` |
+| llm (simonw) | `llm -m gpt-4o` |
+| Codex CLI | `codex exec -` (older builds take the prompt as an argument — use the wrapper) |
+| Any OpenAI-compatible CLI | `your-cli -` |
+
+**Wrapper, for anything that wants a file or an argument:**
+
+```sh
+#!/bin/sh
+# /tmp/agent.sh — reads the prompt on stdin, prints the answer on stdout
+tmp=$(mktemp); cat > "$tmp"
+your-agent --prompt-file "$tmp" --no-interactive
+rm -f "$tmp"
+```
+
+```bash
+./evals/run.sh --agent /tmp/agent.sh --label my-agent
+```
+
+**Two runs you should always do:**
+
+```bash
+# 1. Your real agent
+./evals/run.sh --agent "claude -p" --label claude
+python3 evals/score.py --verbose
+
+# 2. A second model, to see whether the gate is the skill or the model
+./evals/run.sh --agent "ollama run qwen2.5-coder" --label qwen
+python3 evals/score.py --verbose
+```
+
+If the gate holds on one model and collapses on the other, that is a finding about the
+skill's robustness, not about the weaker model.
+
+**Manual fallback** — the same thing by hand, from the repository root:
 
 ```bash
 mkdir -p evals/results
@@ -44,10 +98,21 @@ for d in evals/cases/*/; do
 done
 ```
 
-`evals/results/` is git-ignored — results are yours to publish, not fixtures to commit.
+## What the scorer actually checks
 
-Feeding the skill and the artifact in one prompt is the honest test: it is how a user with
-the skill installed will experience it.
+`score.py` is mechanical and deliberately dumb. Per case it looks for the report structure
+(`SECURITY TRIAGE REPORT` / `FINDINGS SUMMARY` / a `Confidence :` line), reads the `Track` and
+`Severity` fields, and compares them with `expected.yaml`:
+
+- **positives** must produce a finding, on the right track, within one severity band, and
+  mention the key terms (`must_mention`)
+- **negatives** must produce no finding, and must not contain a forbidden string
+  (`must_not`) — checked after stripping the "No HIGH or MEDIUM findings" sentence, which
+  would otherwise trip every negative on its own correct output
+
+It cannot judge whether the reasoning was right. That is what `--verbose` and your eyes are
+for. When a case fails, the first question is whether the case or the scorer is wrong — both
+are code, and both have been wrong before.
 
 ## Scoring
 

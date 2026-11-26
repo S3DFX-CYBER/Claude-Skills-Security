@@ -82,7 +82,7 @@ cases:
     finding: false
     track: D
     confidence: LOW
-    must_mention: ["no PR code", "SHA"]
+    must_mention: ["pinned", "checked out"]
     must_not: ["Critical", "HIGH"]
 
   - id: neg-05-dockerfile-hardening
