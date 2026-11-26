@@ -11,6 +11,7 @@ Works with Claude Code, Cursor, Codex, Copilot, Gemini CLI, Windsurf, Aider, Cli
 Continue — anything that reads a markdown prompt. It is a `SKILL.md` where the runtime has
 that convention, and a plain instruction file everywhere else.
 
+[![Release](https://img.shields.io/github/v/release/S3DFX-CYBER/Claude-Skills-Security?color=3fb950)](https://github.com/S3DFX-CYBER/Claude-Skills-Security/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code skill](https://img.shields.io/badge/Claude%20Code-SKILL.md-orange)](https://code.claude.com/docs/en/skills)
 [![OWASP LLM Top 10 2026](https://img.shields.io/badge/OWASP-LLM%20Top%2010%202026-blue)](https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/)
