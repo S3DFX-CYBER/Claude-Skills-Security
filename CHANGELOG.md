@@ -7,6 +7,31 @@ Methodology: Exploitability-first triage. Every change is grounded in field find
 
 ---
 
+## [Unreleased]
+
+### Added
+- **`evals/run.sh`** — runs the whole corpus against any agent CLI in one command. Builds
+  one prompt per case (skill + artifact, no hint about what to look for), pipes it to the
+  agent, saves the output under `evals/results/<label>/`. `--dry-run`, `--case`, `--label`.
+- **`evals/score.py`** — mechanical scorer. Detects whether a finding was produced, reads
+  the `Track` and `Severity` fields, and compares against `expected.yaml`; checks
+  `must_mention` and `must_not`. Reports recall, false positives, track accuracy. Exits
+  non-zero on failure so it works in CI.
+- **`evals/selftest.sh`** — proves the harness itself scores correctly, with a stub that
+  knows the answers (must score 12/12) and an over-reporting stub (must be caught as 6/6
+  false positives). Run in CI.
+- **Command sheet** in `evals/README.md`: per-tool invocations, a stdin wrapper for tools
+  that want a file, and a second-model run to test whether the gate travels.
+
+### Fixed
+- `must_not` checks fired on the clean notice itself — "No HIGH or MEDIUM confidence
+  findings" contains `HIGH`, so every negative case failed on its own correct output. The
+  notice is now stripped before `must_not` is evaluated.
+- `neg-04` required the literal phrase "no PR code", which no sane answer contains. Relaxed
+  to `pinned` and `checked out`.
+
+---
+
 ## [1.2.2] — 2026-11-26
 
 ### Fixed

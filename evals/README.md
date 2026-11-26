@@ -14,26 +14,94 @@ skill.
 
 | Metric | Definition | Target |
 |---|---|---|
-| **Recall** | positives with a HIGH/MEDIUM report | 6 / 6 |
-| **False positives** | negatives that produced a HIGH/MEDIUM finding | 0 / 6 |
-| **Track accuracy** | cases routed to the right track | 12 / 12 |
+| **Recall** | positives that produced a finding at all | 6 / 6 |
+| **False positives** | negatives that produced a finding | 0 / 6 |
+| **Track accuracy** | cases that emitted a track, routed to the right one | as many as emit one |
 | **Severity agreement** | findings within one band of `expected.yaml` | 6 / 6 |
+
+Each metric measures one thing. A positive with the right finding on the wrong track is a
+recall success and a track failure — it should not depress recall, or you cannot tell a
+detection problem from a classification problem. A clean result that emits no track is
+excluded from track accuracy rather than counted wrong, which is why that denominator moves
+between runs.
 
 A skill that scores 6/6 recall and 4/6 false positives is worse than useless — it is a
 scanner with extra steps. Report both numbers or neither.
 
 ## Running it
 
-The protocol is deliberately manual: it must work on any runtime, not just one vendor's
-harness.
+```bash
+./evals/run.sh --agent "claude -p"                 # results land in evals/results/<label>/
+python3 evals/score.py --verbose                   # score them
+```
 
-1. Install the skill for your runtime (see the main README).
-2. For each case directory, feed `artifact.*` to the agent as the user message, with no
-   hint about what to look for. Do not name the track. Do not say "is this vulnerable".
-3. Save the full output to `evals/results/<runtime>/<case-id>.md`.
-4. Score against `expected.yaml`.
+`run.sh` walks every case, builds one prompt per case (the skill, then the artifact, with no
+hint about what to look for), pipes it to your agent command, and saves the output. The only
+requirement for the agent command is that it **reads the prompt on stdin and writes the
+answer to stdout**.
 
-Run everything from the repository root:
+```bash
+./evals/run.sh --dry-run                           # preview: 12 prompts, nothing executed
+./evals/run.sh --agent "claude -p" --case pos-05-sql-concat
+./evals/run.sh --agent "ollama run qwen2.5-coder" --label qwen-coder
+```
+
+The case id is deliberately **not** put in the prompt. Ids like `neg-01-innerhtml-config`
+telegraph the expected answer, and a model that reads them is being told the verdict.
+
+## Command sheet
+
+Flags move between releases. Check `--help` once; the contract above is what matters.
+
+**Reads stdin, writes stdout — works as-is:**
+
+| Tool | Command |
+|---|---|
+| Claude Code | `claude -p` |
+| Gemini CLI | `gemini -p "$(cat)"` (see wrapper below) |
+| Ollama | `ollama run qwen2.5-coder` |
+| llm (simonw) | `llm -m gpt-4o` |
+| Codex CLI | `codex exec -` (older builds take the prompt as an argument — use the wrapper) |
+| Any OpenAI-compatible CLI | `your-cli -` |
+
+**Wrapper, for anything that wants a file or an argument:**
+
+```sh
+#!/bin/sh
+# /tmp/agent.sh — reads the prompt on stdin, prints the answer on stdout
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT INT TERM
+cat > "$tmp"
+your-agent --prompt-file "$tmp" --no-interactive
+```
+
+Use a `trap`, not a trailing `rm`. A trailing `rm` succeeds even when the agent failed, so
+the wrapper returns 0 and `run.sh` records a broken run as a good one.
+
+```bash
+./evals/run.sh --agent /tmp/agent.sh --label my-agent
+```
+
+**Two runs you should always do:**
+
+```bash
+# 1. Your real agent
+./evals/run.sh --agent "claude -p" --label claude
+python3 evals/score.py --results evals/results/claude --verbose
+
+# 2. A second model, to see whether the gate is the skill or the model
+./evals/run.sh --agent "ollama run qwen2.5-coder" --label qwen
+python3 evals/score.py --results evals/results/qwen --verbose
+```
+
+Score one label at a time. With more than one run present, `score.py` refuses to guess which
+one you meant — picking the alphabetically first directory would silently score the wrong
+model.
+
+If the gate holds on one model and collapses on the other, that is a finding about the
+skill's robustness, not about the weaker model.
+
+**Manual fallback** — the same thing by hand, from the repository root:
 
 ```bash
 mkdir -p evals/results
@@ -44,10 +112,30 @@ for d in evals/cases/*/; do
 done
 ```
 
-`evals/results/` is git-ignored — results are yours to publish, not fixtures to commit.
+## What the scorer actually checks
 
-Feeding the skill and the artifact in one prompt is the honest test: it is how a user with
-the skill installed will experience it.
+`score.py` is mechanical and deliberately dumb. Per case it looks for the report structure
+(`SECURITY TRIAGE REPORT` / `FINDINGS SUMMARY` / a `Confidence :` line), reads the `Track` and
+`Severity` fields, and compares them with `expected.yaml`:
+
+- **positives** must produce a finding, on the right track, within one severity band, and
+  mention the key terms (`must_mention`)
+- **negatives** must produce no finding, and must not contain a forbidden string
+  (`must_not`) — checked after stripping the "No HIGH or MEDIUM findings" sentence, which
+  would otherwise trip every negative on its own correct output
+
+A finding is a `FINDING` section containing a `Confidence` field. The report banner proves
+nothing — a correct clean result is wrapped in the same `SECURITY TRIAGE REPORT` header (see
+[`examples/02-false-positive`](../examples/02-false-positive/output.md)). Text inside `NOTES`
+is excluded, because the protocol counts a finding confined to NOTES as a false negative.
+
+It cannot judge whether the reasoning was right. That is what `--verbose` and your eyes are
+for. When a case fails, the first question is whether the case or the scorer is wrong — both
+are code, and both have been wrong before.
+
+**A partial run is not a score.** If any case has no result — an interrupted run, a
+`--case` invocation — the scorer exits non-zero and says so. Quote a number only after the
+full corpus has run.
 
 ## Scoring
 

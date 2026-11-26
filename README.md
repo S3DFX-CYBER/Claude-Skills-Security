@@ -206,9 +206,14 @@ Twelve labelled cases — six vulnerabilities, six false-positive traps. Scored 
 false-positive rate, track accuracy and severity agreement.
 
 ```bash
-ls evals/cases/
-cat evals/README.md    # protocol, ~5 minutes per full run
+./evals/run.sh --agent "claude -p"     # runs all 12 cases, saves the output
+python3 evals/score.py --verbose       # recall, false positives, track, severity
 ```
+
+Any agent works: the command only has to read the prompt on stdin and write the answer to
+stdout. `./evals/run.sh --dry-run` previews the 12 prompts without executing anything.
+Command lines for Claude Code, Gemini CLI, Ollama, llm, Codex and a wrapper for everything
+else are in [evals/README.md](evals/README.md).
 
 The negatives are the point. Any model produces the six positives; the skill earns its
 keep on the six it declines to report. Publish your number when you run it — an unmeasured
