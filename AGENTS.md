@@ -13,7 +13,7 @@ and any agent runtime that reads AGENTS.md for capability discovery.
 ### security-triage
 
 **File:** `skills/security-triage/SKILL.md`
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Type:** Triage methodology / system prompt skill
 
 A confidence-gated security triage skill for AI agents. Covers 6 tracks:

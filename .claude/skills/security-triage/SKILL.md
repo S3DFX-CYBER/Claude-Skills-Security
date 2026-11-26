@@ -13,7 +13,7 @@ when_to_use: >
   exploitable", "is this safe", "what is the real risk", or "how do I fix this".
 license: MIT
 metadata:
-  version: 1.2.0
+  version: 1.2.2
   author: S3DFX-CYBER
   tracks:
     - A: CVE / Scanner Alert
