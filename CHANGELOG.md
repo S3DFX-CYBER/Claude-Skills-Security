@@ -7,6 +7,36 @@ Methodology: Exploitability-first triage. Every change is grounded in field find
 
 ---
 
+## [1.2.1] — 2026-11-26
+
+### Added
+- **`install.sh`** — universal installer. One script, no dependencies, no network, no sudo:
+  `claude`, `claude-global`, `cursor`, `windsurf`, `continue`, `copilot`, `codex`, `gemini`,
+  `aider`, `cline`, `zed`, `print`. Idempotent for the append targets.
+- **`llms.txt`** — machine-readable index of the skill, examples and evals, for agents that
+  fetch a repository summary before reading it.
+- **`img/banner.svg`, `img/gate.svg`** — original diagrams. The gate diagram is documentation:
+  it shows the three outcomes and where `BLIND SPOTS` sits.
+- **COMPATIBILITY.md** — "Other agents and tools" section covering nine more runtimes, plus
+  what actually travels across them (the gate survives truncation; the glyphs do not).
+
+### Fixed
+- **Track B, Go: `text/template` no longer implies XSS.** Unescaped output is only XSS when it
+  reaches an HTML context. Logs, email bodies, CSVs and CLIs are assessed against the sink that
+  actually consumes them; user-controlled template *source* is template injection (CWE-1336)
+  in either package. Reported in review.
+- **`evals/README.md` run loop** — paths were relative to no single working directory, so the
+  documented command could not run. Now anchored at the repo root, writing to the git-ignored
+  `evals/results/`. Reported in review.
+- **CI stale-path check** failed on the old path recorded in this changelog's history. Both
+  greps now exclude `CHANGELOG.md`. Reported in review.
+
+### Changed
+- README leads with the banner, carries the gate diagram next to the gate table, and documents
+  the installer as the primary path for non-Claude tools.
+
+---
+
 ## [1.2.0] — 2026-11-25
 
 ### Added

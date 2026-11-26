@@ -30,16 +30,21 @@ harness.
 1. Install the skill for your runtime (see the main README).
 2. For each case directory, feed `artifact.*` to the agent as the user message, with no
    hint about what to look for. Do not name the track. Do not say "is this vulnerable".
-3. Save the full output to `results/<runtime>/<case-id>.md`.
+3. Save the full output to `evals/results/<runtime>/<case-id>.md`.
 4. Score against `expected.yaml`.
 
-```
-for d in cases/*/; do
+Run everything from the repository root:
+
+```bash
+mkdir -p evals/results
+for d in evals/cases/*/; do
   id=$(basename "$d")
   art=$(ls "$d"artifact.*)
-  cat skills/security-triage/SKILL.md "$art" | your-agent > "results/$id.md"
+  cat skills/security-triage/SKILL.md "$art" | your-agent > "evals/results/$id.md"
 done
 ```
+
+`evals/results/` is git-ignored — results are yours to publish, not fixtures to commit.
 
 Feeding the skill and the artifact in one prompt is the honest test: it is how a user with
 the skill installed will experience it.

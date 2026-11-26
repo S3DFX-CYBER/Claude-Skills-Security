@@ -1,7 +1,15 @@
+<p align="center">
+  <img src="img/banner.svg" alt="security-triage: confidence-gated triage for AI coding agents" width="100%">
+</p>
+
 # security-triage
 
-**A confidence-gated security triage skill for AI agents.** Six tracks. A gate that
+**A confidence-gated security triage skill for AI coding agents.** Six tracks. A gate that
 suppresses false positives before severity is assigned. Output a developer can act on.
+
+Works with Claude Code, Cursor, Codex, Copilot, Gemini CLI, Windsurf, Aider, Cline, Zed,
+Continue — anything that reads a markdown prompt. It is a `SKILL.md` where the runtime has
+that convention, and a plain instruction file everywhere else.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code skill](https://img.shields.io/badge/Claude%20Code-SKILL.md-orange)](https://code.claude.com/docs/en/skills)
@@ -42,6 +50,10 @@ reporting it as one is how security tooling loses its audience.
 
 See it work: **[examples/02-false-positive](examples/02-false-positive/)** — six scanner
 flags, zero findings, and the reason for each.
+
+<p align="center">
+  <img src="img/gate.svg" alt="Flow: artifact, classify track, confidence gate, then HIGH, MEDIUM or LOW" width="100%">
+</p>
 
 ---
 
@@ -102,6 +114,49 @@ gemini -s "$(cat skills/security-triage/SKILL.md)" "Triage this Dockerfile: $(ca
 
 Details and per-runtime quirks: [COMPATIBILITY.md](COMPATIBILITY.md).
 Agent discovery and invocation contracts: [AGENTS.md](AGENTS.md).
+
+### One command, any agent
+
+```bash
+git clone https://github.com/S3DFX-CYBER/Claude-Skills-Security.git
+cd Claude-Skills-Security
+
+./install.sh claude        # .claude/skills/security-triage/SKILL.md
+./install.sh cursor        # .cursor/rules/security-triage.mdc
+./install.sh codex         # appends to AGENTS.md
+./install.sh copilot       # appends to .github/copilot-instructions.md
+./install.sh gemini        # appends to GEMINI.md
+./install.sh aider         # appends to CONVENTIONS.md
+./install.sh cline         # appends to .clinerules
+./install.sh zed           # appends to .rules
+./install.sh windsurf      # .windsurf/rules/security-triage.md
+./install.sh continue      # .continue/rules/security-triage.md
+./install.sh print         # stdout, for anything else
+```
+
+No dependencies, no network, no sudo. It writes the skill where the tool looks for it and
+tells you what it did. Run `./install.sh` with no argument for the full list.
+
+| Tool | Installed to | How it is discovered |
+|---|---|---|
+| Claude Code | `.claude/skills/security-triage/SKILL.md` | native skill, `/security-triage` |
+| claude.ai | skill upload or Project instructions | native |
+| Cursor | `.cursor/rules/security-triage.mdc` | project rule |
+| Windsurf | `.windsurf/rules/security-triage.md` | project rule |
+| Continue | `.continue/rules/security-triage.md` | project rule |
+| GitHub Copilot | `.github/copilot-instructions.md` | repository instructions |
+| Codex / OpenAI agents | `AGENTS.md` | agent discovery file |
+| Gemini CLI | `GEMINI.md` | context file |
+| Aider | `CONVENTIONS.md` | `--read CONVENTIONS.md` |
+| Cline | `.clinerules` | project rules |
+| Zed | `.rules` | project rules |
+| Anything else | `./install.sh print` | pipe into a system prompt |
+
+### Machine-readable index
+
+[`llms.txt`](llms.txt) lists the skill, the examples and the evals in the format agents fetch
+when they need to know what a repository contains. Point a tool at it, or paste it into a
+retrieval pipeline.
 
 ---
 

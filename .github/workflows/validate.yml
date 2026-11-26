@@ -75,3 +75,16 @@ jobs:
             echo "::error::Stale path — Claude Code needs a directory containing SKILL.md"
             exit 1
           fi
+
+      - name: Installer works for every documented target
+        run: |
+          sh -n install.sh
+          tmp=$(mktemp -d)
+          ( cd "$tmp" && "$GITHUB_WORKSPACE/install.sh" claude )
+          cmp skills/security-triage/SKILL.md "$tmp/.claude/skills/security-triage/SKILL.md"
+          ( cd "$tmp" && "$GITHUB_WORKSPACE/install.sh" cursor )
+          head -1 "$tmp/.cursor/rules/security-triage.mdc" | grep -qx -- '---'
+          ( cd "$tmp" && "$GITHUB_WORKSPACE/install.sh" codex )
+          grep -q "Confidence Gate" "$tmp/AGENTS.md"
+          "$GITHUB_WORKSPACE/install.sh" print | grep -q "Confidence Gate"
+          echo "installer ok"

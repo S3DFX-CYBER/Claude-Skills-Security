@@ -248,3 +248,53 @@ Recommended: Claude Sonnet, GPT-4o, Gemini 1.5 Pro, or equivalent.
 | CVSS construction accuracy | High | High | Medium | High | Variable |
 | Confidence gate reliability | High | High | Medium | High | Variable |
 | Recommended for prod triage | ✅ | ✅ | ⚠️ review output | ✅ | ⚠️ test first |
+
+---
+
+## Other Agents and Tools
+
+Everything in this table uses the same artifact: the markdown body of
+`skills/security-triage/SKILL.md`, frontmatter stripped. `./install.sh <target>` writes it
+in the right place.
+
+| Tool | Target | Mechanism |
+|---|---|---|
+| Cursor | `./install.sh cursor` | `.cursor/rules/*.mdc`, `alwaysApply: false` |
+| Windsurf | `./install.sh windsurf` | `.windsurf/rules/` |
+| Continue | `./install.sh continue` | `.continue/rules/` |
+| GitHub Copilot | `./install.sh copilot` | `.github/copilot-instructions.md` |
+| Codex / OpenAI agents | `./install.sh codex` | `AGENTS.md` |
+| Gemini CLI | `./install.sh gemini` | `GEMINI.md` |
+| Aider | `./install.sh aider` | `CONVENTIONS.md` via `--read` |
+| Cline | `./install.sh cline` | `.clinerules` |
+| Zed | `./install.sh zed` | `.rules` |
+| Any other tool | `./install.sh print` | stdout — pipe into a system prompt |
+
+```bash
+# Anything that takes a system prompt or a prompt file
+./install.sh print > /tmp/security-triage.md
+your-agent --system-prompt /tmp/security-triage.md "triage this Dockerfile: $(cat Dockerfile)"
+
+# Anything that takes a single concatenated prompt
+your-agent "$(./install.sh print)"$'
+
+'"$(cat .github/workflows/deploy.yml)"
+```
+
+### What actually travels
+
+Two things matter across runtimes, and neither is the file format:
+
+1. **The gate must survive.** A runtime that truncates context or summarises the system prompt
+   will drop the LOW-suppression rule first, because it reads as a restriction. If you see
+   findings reported without a confidence level, the gate was lost — shorten what you paste
+   to the gate, the track definitions and the report format.
+2. **Output format is per-runtime.** The box-drawing characters in the report template render
+   inconsistently in some UIs. The structure is what matters, not the glyphs; tell the agent to
+   keep the section order if your client mangles the borders.
+
+### Local models
+
+The gate and the structured output both depend on instruction-following. Below roughly 13B
+parameters, expect the gate to be skipped and the report to be flattened. Test with
+`evals/` before trusting a small model in a review path.

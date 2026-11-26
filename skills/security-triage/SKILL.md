@@ -112,7 +112,7 @@ sanitisation before assigning HIGH.
 | Python | `eval`, `exec`, `os.system`, `subprocess.*(shell=True)`, `pickle.loads`, `yaml.load` without Loader | `ast.literal_eval`, `yaml.safe_load`, `subprocess.run([...])` |
 | Python (web) | `cursor.execute(f"...{x}")`, `mark_safe(user_input)`, `render_template_string(user)` | parameterised query, `format_html`, template file |
 | Java | `Runtime.exec`, `ProcessBuilder` with shell, `Statement.execute(sql+input)`, `ObjectInputStream.readObject` | `PreparedStatement`, allowlist `ObjectInputFilter` |
-| Go | `exec.Command("sh", "-c", x)`, `text/template` on user data, `unsafe.Pointer` arithmetic | `exec.Command(bin, args...)`, `html/template` |
+| Go | `exec.Command("sh", "-c", x)`, `text/template` unescaped into HTML, `unsafe.Pointer` arithmetic | `exec.Command(bin, args...)`, `html/template` |
 | PHP | `eval`, `include $var`, `unserialize`, `system` / `shell_exec`, `extract($_GET)` | `include` from a fixed map, `json_decode` |
 | Ruby | `eval`, `send(params[:m])`, `system("...#{x}")`, `YAML.load` | `public_send` on an allowlist, `YAML.safe_load` |
 | Rust | `Command::new("sh").arg("-c")`, `unsafe { from_raw_parts }`, `std::mem::transmute` | typed `Command` args, bounds-checked slicing |
@@ -122,8 +122,14 @@ Two rules override the table:
 
 - **A dangerous sink fed by a constant is not a finding.** `os.system("ls -la")` is code
   quality, not a vulnerability. Report it only if a variable reaches it.
-- **In Go, `text/template` vs `html/template` is the entire difference.** `text/template`
-  performs no escaping; user data reaching it is XSS at HIGH confidence.
+- **In Go, `text/template` vs `html/template` decides whether escaping happens — it does not
+  by itself decide whether XSS is possible.** `text/template` performs no escaping, but XSS
+  also needs the rendered output to land in an HTML context:
+  - `text/template` + user data + output rendered into an HTML response → XSS, HIGH.
+  - `text/template` + user data + output to a log, email body, CSV or CLI → not XSS. Assess
+    the sink that actually consumes it (log injection, CSV injection, the downstream parser).
+  - User-controlled *template source*, in either package → template injection (CWE-1336),
+    HIGH regardless of output context: the attacker is writing template expressions.
 
  — LLM Application Security**
 Prompt injection, LLM app code, RAG pipeline, AI agent with tools,

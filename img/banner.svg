@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="security-triage: confidence-gated security triage for AI coding agents">
+  <rect width="1200" height="300" fill="#0b0f14"/>
+  <g stroke="#151d27" stroke-width="1">
+    <line x1="60" y1="0" x2="60" y2="300"/>
+    <line x1="180" y1="0" x2="180" y2="300"/>
+    <line x1="300" y1="0" x2="300" y2="300"/>
+    <line x1="420" y1="0" x2="420" y2="300"/>
+    <line x1="540" y1="0" x2="540" y2="300"/>
+    <line x1="660" y1="0" x2="660" y2="300"/>
+    <line x1="780" y1="0" x2="780" y2="300"/>
+    <line x1="900" y1="0" x2="900" y2="300"/>
+    <line x1="1020" y1="0" x2="1020" y2="300"/>
+    <line x1="1140" y1="0" x2="1140" y2="300"/>
+    <line x1="0" y1="60" x2="1200" y2="60"/>
+    <line x1="0" y1="150" x2="1200" y2="150"/>
+    <line x1="0" y1="240" x2="1200" y2="240"/>
+  </g>
+
+  <rect x="0" y="0" width="1200" height="3" fill="#3fb950"/>
+
+  <text x="64" y="122" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="50" font-weight="700" fill="#e6edf3">security-triage</text>
+  <text x="64" y="158" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="19" fill="#8b949e">Confidence-gated triage for AI coding agents</text>
+
+  <text x="64" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#58a6ff">A</text>
+  <text x="78" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#6e7681">CVE</text>
+  <text x="122" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#58a6ff">B</text>
+  <text x="136" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#6e7681">CODE</text>
+  <text x="184" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#58a6ff">C</text>
+  <text x="198" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#6e7681">LLM</text>
+  <text x="240" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#58a6ff">D</text>
+  <text x="254" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#6e7681">CI/CD</text>
+  <text x="310" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#58a6ff">E</text>
+  <text x="324" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#6e7681">CONTAINER</text>
+  <text x="414" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#58a6ff">F</text>
+  <text x="428" y="202" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#6e7681">SECRETS</text>
+
+  <text x="64" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#6e7681">12 labelled evals · 3 worked examples · plain markdown</text>
+
+  <rect x="640" y="52" width="496" height="196" rx="10" fill="#0f1620" stroke="#263140" stroke-width="1.5"/>
+  <text x="668" y="82" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#6e7681">THE GATE — applied before severity</text>
+
+  <rect x="668" y="96" width="96" height="30" rx="6" fill="#0d2818" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="684" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#3fb950">HIGH</text>
+  <text x="784" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#c9d1d9">full triage report</text>
+
+  <rect x="668" y="142" width="96" height="30" rx="6" fill="#2b2000" stroke="#d29922" stroke-width="1.5"/>
+  <text x="678" y="162" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#d29922">MEDIUM</text>
+  <text x="784" y="162" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#c9d1d9">report + explicit caveat</text>
+
+  <rect x="668" y="188" width="96" height="30" rx="6" fill="#2d0f12" stroke="#f85149" stroke-width="1.5"/>
+  <text x="684" y="208" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" font-weight="700" fill="#f85149">LOW</text>
+  <text x="784" y="208" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#8b949e">notes only — never a finding</text>
+</svg>
