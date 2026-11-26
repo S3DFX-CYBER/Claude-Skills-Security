@@ -32,10 +32,11 @@ FINDING
                CVSS has no component for "the model was persuaded".
 
 CLASSIFICATION
-  OWASP LLM  : LLM05 Improper Output Handling (primary)
-               LLM01 Prompt Injection (enabling — the trigger arrives through retrieved
-               content, i.e. indirect injection)
-  OWASP Agentic : A04 Excessive Agentic Autonomy, A07 Inadequate Sandboxing
+  OWASP LLM  : LLM10:2026 Improper Output Handling (primary)
+               LLM01:2026 Prompt Injection (enabling — the trigger arrives through
+               retrieved content, i.e. indirect injection)
+  OWASP Agentic : ASI05:2026 Unexpected Code Execution (RCE),
+               ASI02:2026 Tool Misuse & Exploitation
   CWE        : CWE-78 OS Command Injection, CWE-94
 
 WHAT IS THIS?
@@ -115,9 +116,9 @@ FINDING
   LLM Risk   : High — cross-customer data disclosure, plus durable injection
 
 CLASSIFICATION
-  OWASP LLM  : LLM08 Vector and Embedding Weaknesses (primary)
-               LLM01 Prompt Injection (durable variant)
-  OWASP Agentic : A03 Cross-Session / Cross-Tenant Data Leakage, A05 Untrusted Memory
+  OWASP LLM  : LLM09:2026 Vector and Embedding Weaknesses (primary)
+               LLM05:2026 Data and Model Poisoning (durable variant)
+  OWASP Agentic : ASI06:2026 Memory & Context Poisoning
 
 WHAT IS THIS?
   Every customer's uploaded documents go into one collection, and every query searches
@@ -176,8 +177,8 @@ FINDING
   LLM Risk   : Medium — credential disclosure requiring a successful extraction
 
 CLASSIFICATION
-  OWASP LLM  : LLM02 Sensitive Information Disclosure (primary)
-               LLM07 System Prompt Leakage (the mechanism)
+  OWASP LLM  : LLM02:2026 Sensitive Information Disclosure (primary)
+               LLM08:2026 Hidden Context Exposure (the mechanism)
   CWE        : CWE-798 Use of Hard-coded Credentials, CWE-200 Exposure of Sensitive Info
 
 WHAT IS THIS?
