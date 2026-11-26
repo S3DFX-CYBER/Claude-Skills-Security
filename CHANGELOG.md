@@ -7,6 +7,34 @@ Methodology: Exploitability-first triage. Every change is grounded in field find
 
 ---
 
+## [1.2.2] — 2026-11-26
+
+### Fixed
+- **Track C now follows the OWASP Top 10 for LLM Applications 2026** (published
+  2026-08-04), not the 2025 list. The numbering moved, so every heuristic was renumbered:
+  Improper Output Handling is **LLM10** (was LLM05), Excessive Agency is **LLM03** (was
+  LLM06), Supply Chain is **LLM04** (was LLM03), Data and Model Poisoning is **LLM05** (was
+  LLM04), Unbounded Consumption is **LLM06** (was LLM10), Misinformation is **LLM07** (was
+  LLM09), Vector and Embedding Weaknesses is **LLM09** (was LLM08).
+- **Added LLM08:2026 Hidden Context Exposure**, which absorbs and broadens 2025's LLM07
+  System Prompt Leakage: system prompt, developer instructions, retrieved policy text, tool
+  and function schemas, permission and role directives, output formatting rules — with the
+  four-band severity ladder the 2026 text specifies.
+- **LLM10:2026 Improper Output Handling** gains the two sink classes the 2026 text adds:
+  ANSI escape sequences reaching terminal, log-viewer and IDE sinks, and chat UIs that
+  auto-fetch Markdown images or link previews from model output.
+- **Agentic references corrected to the official ASI01–ASI10 IDs.** The previous labels
+  were descriptive inventions; the published list is ASI01 Agent Goal Hijack through ASI10
+  Rogue Agents. Example 03 cited three of them incorrectly and is fixed.
+
+### Added
+- **2025 → 2026 numbering map** in Track C, so a report written against the old list can be
+  translated before severity is reasoned about.
+- **Hard rule:** never cite an LLM category without its year.
+- Taxonomy source links in Track C; README badge and Track C description updated.
+
+---
+
 ## [1.2.1] — 2026-11-26
 
 ### Added

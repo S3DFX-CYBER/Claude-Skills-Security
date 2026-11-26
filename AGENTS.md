@@ -179,7 +179,11 @@ Common agent errors to avoid:
 - Transitive dependency with no direct call: do NOT use base CVSS score
 - Internal-only service: `AV:N` overstates real risk — note this explicitly in report
 
-For LLM findings (Track C): use OWASP LLM Risk Rating, NOT CVSS.
+For LLM findings (Track C): use the OWASP LLM Risk Rating, NOT CVSS. Cite categories with
+their year — the 2026 list (published 2026-08-04) renumbered several entries, so
+`LLM05:2025` (Improper Output Handling) and `LLM05:2026` (Data and Model Poisoning) are
+different categories. The skill carries the full 2025 to 2026 mapping table, plus the
+Agentic ASI01-ASI10 IDs.
 CVSS maps poorly to LLM application layer vulnerabilities.
 
 ---
