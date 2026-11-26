@@ -13,7 +13,7 @@ that convention, and a plain instruction file everywhere else.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code skill](https://img.shields.io/badge/Claude%20Code-SKILL.md-orange)](https://code.claude.com/docs/en/skills)
-[![OWASP LLM Top 10](https://img.shields.io/badge/OWASP-LLM%20Top%2010-blue)](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
+[![OWASP LLM Top 10 2026](https://img.shields.io/badge/OWASP-LLM%20Top%2010%202026-blue)](https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/)
 [![Evals](https://img.shields.io/badge/evals-12%20labelled%20cases-brightgreen)](evals/)
 
 ---
@@ -166,7 +166,7 @@ retrieval pipeline.
 |---|---|---|
 | **A — CVE / Scanner Alert** | CVE IDs, Dependabot, Snyk, npm audit, pip-audit, Trivy, SARIF | Is the vulnerable function actually called? Does the base score hold here? |
 | **B — Code Snippet** | Any language | Source-to-sink tracing, upstream sanitisation, per-language sink tables |
-| **C — LLM Application Security** | Prompts, RAG pipelines, agents, tool calls | OWASP LLM Top 10, model-level vs application-level, indirect injection |
+| **C — LLM Application Security** | Prompts, RAG pipelines, agents, tool calls | OWASP Top 10 for LLM Applications 2026 (LLM01–LLM10) and Agentic (ASI01–ASI10), model-level vs application-level, indirect injection |
 | **D — CI/CD & GitHub Actions** | `.github/workflows/*.yml` | Script injection (CWE-78), `pull_request_target` RCE, SHA pinning, permissions |
 | **E — Container & Infrastructure** | Dockerfile, compose, k8s, Helm | Root user, floating tags, secrets in layers, capabilities |
 | **F — Secrets & Credential Exposure** | gitleaks/trufflehog output, `.env`, bundles | Is it live, where does it reach, what is the blast radius |

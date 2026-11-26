@@ -144,66 +144,157 @@ Application-level  How the app uses the LLM. Fixable in code.
                    90% of real LLM vulnerabilities are here.
 ```
 
-OWASP LLM Top 10 2025 — Detection Heuristics:
+OWASP Top 10 for LLM Applications 2026 — Detection Heuristics
 
-LLM01 Prompt Injection
-- Direct: user input concatenated into prompt where it can issue instructions
+Published 2026-08-04. The numbering moved relative to the 2025 list, so always state the
+year when you cite a category: **LLM05:2025 is Improper Output Handling; LLM05:2026 is
+Data and Model Poisoning.** A finding quoted as "LLM05" with no year is ambiguous and will
+be misread. Mapping table at the end of this track.
+
+Source: OWASP Top 10 for LLM Applications 2026, published 2026-08-04 —
+https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/
+Canonical source: https://github.com/GenAI-Security-Project/GenAI-LLM-Top10 (2026/final/)
+
+LLM01:2026 Prompt Injection
+- Direct: user input concatenated into a prompt where it can issue instructions
   `f"You are helpful. Answer: {user_input}"` — user controls instruction space
-- Indirect: external content (web scrape, DB row, tool result) contains injected instructions
-- HIGH confidence if: user/external input reaches LLM prompt without trust boundary
-- Fix: structured message roles (system/user/assistant), never concatenate user input
-  into system prompt, treat all external content as untrusted
+- Indirect: external content (web scrape, DB row, tool result, retrieved document)
+  contains injected instructions
+- HIGH confidence if: user or external input reaches the LLM prompt without a trust boundary
+- Fix: structured message roles (system/user/assistant), never concatenate user input into
+  the system prompt, treat all retrieved and tool-returned content as untrusted data
 
-LLM02 Sensitive Information Disclosure
-- System prompt or context contains secrets, PII, internal URLs extractable via adversarial prompting
-- HIGH confidence if: API keys, credentials, or internal topology in system prompt
-- Fix: never put secrets in system prompts; output filtering layer before response leaves server
+LLM02:2026 Sensitive Information Disclosure
+- Regulated or private data (user records, PII, training data, other tenants' documents)
+  returned by the model or recoverable from it
+- HIGH confidence if: the app can be induced to return data the requesting user is not
+  entitled to
+- Note the boundary with LLM08: LLM02 is the *data*, LLM08 is the *instructions and context*
+- Fix: authorization filtering before retrieval and before the model sees context; output
+  filtering before the response leaves the server
 
-LLM03 Supply Chain
-- Third-party model, plugin, dataset with no integrity verification
-- HIGH confidence if: model loaded from unverified source; plugins execute without sandboxing
-- Fix: pin model versions with digest hashes; sandbox all plugin execution
+LLM03:2026 Excessive Agency
+  (was LLM06:2025 — note the move)
+- Root causes are excessive functionality, excessive permissions, excessive autonomy
+- HIGH confidence if: the agent can take an irreversible action (write, delete, send,
+  publish, pay) without human confirmation, or holds credentials broader than its task
+- Triggers include hallucination as well as injection — the control must not depend on the
+  model behaving
+- Fix: least-privilege tooling, read-only by default, human-in-the-loop for destructive
+  actions, per-tool scopes rather than one broad token
 
-LLM04 Data and Model Poisoning
-- Training/fine-tuning data sourced from attacker-controllable inputs without review
-- HIGH confidence if: user-generated content fed directly into fine-tuning pipeline
-- Fix: data provenance tracking; human review gate before any fine-tuning run
+LLM04:2026 Supply Chain
+  (was LLM03:2025)
+- Third-party model, plugin, dataset or MCP server with no integrity verification
+- HIGH confidence if: a model or tool is loaded from an unverified source, or third-party
+  tools execute without sandboxing
+- Fix: pin model versions with digest hashes, sign and verify tool manifests, sandbox all
+  plugin execution
 
-LLM05 Improper Output Handling
-- LLM output passed to exec(), eval(), shell command, SQL query, or raw HTML render
-- ALWAYS treat as Critical if LLM output reaches any execution sink
-- HIGH confidence if: LLM output → downstream system with no sanitization
+LLM05:2026 Data and Model Poisoning
+  (was LLM04:2025 — this is the ID most often misquoted from old reports)
+- Training, fine-tuning, or retrieval data sourced from attacker-controllable input without
+  review
+- HIGH confidence if: user-generated content reaches a fine-tuning pipeline, or untrusted
+  documents reach a vector store that other users query
+- Fix: provenance tracking, human review gate before any fine-tuning run, per-tenant
+  isolation in the vector store
+
+LLM06:2026 Unbounded Consumption
+  (was LLM10:2025)
+- No rate limiting, token caps, or cost controls on model calls
+- HIGH confidence if: unauthenticated users can trigger unbounded calls, or a single input
+  can cause super-linear fan-out (agent loops, recursive tool use)
+- Fix: per-user token budgets, request rate limits, hard max_tokens, loop and step caps for
+  agents, alerting on spend anomalies
+
+LLM07:2026 Misinformation
+  (was LLM09:2025)
+- Model output presented as authoritative in a high-stakes decision without verification
+- HIGH confidence if: medical, legal, financial or safety-critical output reaches a user or
+  an automated action with no human review and no grounding
+- Fix: mandatory human review gates, retrieval grounding with citations, confidence
+  signalling, and a visible distinction between generated and verified content
+
+LLM08:2026 Hidden Context Exposure
+  (new in 2026 — absorbs and broadens 2025 LLM07 System Prompt Leakage)
+- The context that is hidden from the user but available to the model: system prompt,
+  developer instructions, retrieved policy text, tool and function schemas, permission and
+  role directives, output formatting and validation rules
+- Severity tracks what is in it and what depends on it staying secret:
+  - informational — nothing security-relevant in it
+  - MEDIUM — internal rules, refusal logic, filtering criteria, role descriptions that
+    meaningfully help an attacker
+  - HIGH — credentials or tokens embedded in it, or authorization / content policy enforced
+    *only* by hiding the rule
+  - Critical — disclosure chains to RCE, broad exfiltration, or privilege escalation
+- HIGH confidence if: secrets sit in hidden context, or a security decision relies on the
+  model not revealing its instructions
+- Amplifier: disclosed rules make LLM01 injection more precise, and revealed tool schemas
+  widen LLM03
+- Does NOT cover: regulated user data (LLM02), agentic memory and inter-agent channels
+  (ASI), or generic appsec leakage such as logs and client bundles
+- Fix: treat hidden context as public. No credentials in it. Enforce authorization and
+  content policy in deterministic code, never in prompt text
+
+LLM09:2026 Vector and Embedding Weaknesses
+  (was LLM08:2025)
+- RAG corpus poisoning via attacker-controlled ingestion; embedding inversion recovering
+  approximate source text; missing tenant isolation in a shared vector store
+- HIGH confidence if: documents are ingested from untrusted sources without validation, or
+  queries run without an owner filter
+- Fix: validate ingested content, enforce access control and per-tenant namespaces at both
+  write and query time, cap document size, strip control characters
+
+LLM10:2026 Improper Output Handling
+  (was LLM05:2025 — the other ID most often misquoted)
+- Model output passed to an execution or rendering sink without context-specific handling
+- ALWAYS Critical if model output reaches an execution sink
 - Dangerous sinks: `exec(llm)`, `eval(llm)`, `subprocess.run(llm, shell=True)`,
-  `cursor.execute(f"...{llm}...")`, `innerHTML = llm`
-- Fix: treat all LLM output as untrusted user input; validate before any execution
-- Note: this is CWE-94/95 at the application layer, not a model-level issue
+  `cursor.execute(f"...{llm}...")`, `innerHTML = llm`, file paths built from output
+- 2026 additions worth checking specifically:
+  - terminal, log-viewer and IDE sinks that interpret ANSI escape sequences — visual
+    spoofing, OSC 52 clipboard hijacking
+  - chat UIs that auto-fetch Markdown images or link previews referenced in output —
+    exfiltration of context via the request URL
+- Fix: treat all model output as untrusted user input; encode for the specific sink; strip
+  control characters before display; do not auto-fetch remote resources named in output
 
-LLM06 Excessive Agency
-- LLM agent has write/delete/send/publish access beyond what task requires
-- HIGH confidence if: agent can take irreversible actions without human confirmation
-- Fix: least-privilege tooling; read-only by default; human-in-the-loop for destructive actions
+**Numbering map — 2025 to 2026**
 
-LLM07 System Prompt Leakage
-- System prompt extractable via "repeat your instructions" or role-play attacks
-- HIGH confidence if: system prompt contains proprietary logic harmful if disclosed
-- Fix: assume system prompt is not secret; put business logic server-side instead
+| 2025 | 2026 |
+|---|---|
+| LLM01 Prompt Injection | LLM01 Prompt Injection |
+| LLM02 Sensitive Information Disclosure | LLM02 Sensitive Information Disclosure |
+| LLM03 Supply Chain | LLM04 Supply Chain |
+| LLM04 Data and Model Poisoning | LLM05 Data and Model Poisoning |
+| LLM05 Improper Output Handling | **LLM10** Improper Output Handling |
+| LLM06 Excessive Agency | **LLM03** Excessive Agency |
+| LLM07 System Prompt Leakage | absorbed into **LLM08** Hidden Context Exposure |
+| LLM08 Vector and Embedding Weaknesses | **LLM09** Vector and Embedding Weaknesses |
+| LLM09 Misinformation | **LLM07** Misinformation |
+| LLM10 Unbounded Consumption | **LLM06** Unbounded Consumption |
 
-LLM08 Vector and Embedding Weaknesses
-- RAG corpus poisoning via attacker-controlled document ingestion
-- Embedding inversion: PII approximately recoverable from stored embeddings
-- HIGH confidence if: ingested documents from untrusted sources without validation
-- Fix: input validation on all ingested content; access controls on vector store;
-  namespace/tenant isolation in multi-user RAG
+When triaging a report written against the 2025 list, translate the ID before you reason
+about severity — the heuristics for the same number are different categories.
 
-LLM09 Misinformation
-- LLM output used as authoritative source in high-stakes decisions without verification
-- HIGH confidence if: medical, legal, financial, or safety-critical output with no human review
-- Fix: mandatory human review gates; confidence indicators; RAG grounding with citations
+**Agentic systems — OWASP Top 10 for Agentic Applications (ASI01–ASI10, 2026)**
 
-LLM10 Unbounded Consumption
-- No rate limiting, token caps, or cost controls on LLM API calls
-- HIGH confidence if: unauthenticated users can trigger unbounded LLM API calls
-- Fix: per-user token budgets; request rate limiting; hard max_tokens caps
+Use these alongside the LLM list when the target is an agent: multi-step tool use, memory,
+inter-agent messaging, or autonomous action. Cite ASI IDs, not descriptive labels.
+
+| ID | Risk | Reach for it when |
+|---|---|---|
+| ASI01 | Agent Goal Hijack | injected content redirects the agent's objective |
+| ASI02 | Tool Misuse & Exploitation | a legitimate tool is driven to a harmful end |
+| ASI03 | Identity & Privilege Abuse | the agent's credentials or roles exceed its task |
+| ASI04 | Agentic Supply Chain Vulnerabilities | third-party agents, tools, MCP servers |
+| ASI05 | Unexpected Code Execution (RCE) | agent output reaches an execution sink |
+| ASI06 | Memory & Context Poisoning | persisted memory or shared context is attacker-influenced |
+| ASI07 | Insecure Inter-Agent Communication | unauthenticated or unvalidated agent-to-agent messages |
+| ASI08 | Cascading Failures | one compromised step propagates across the chain |
+| ASI09 | Human-Agent Trust Exploitation | the human approves because the agent sounds certain |
+| ASI10 | Rogue Agents | an agent acting outside its intended scope or oversight |
 
 **Track D — CI/CD & GitHub Actions**
 .github/workflows/*.yml, CI config files, workflow permissions.
@@ -376,7 +467,7 @@ FINDING
                [LLM findings: LLM Risk: Critical/High/Medium/Low]
 
 CLASSIFICATION
-  OWASP      : [A01–A10 with name | LLM01–LLM10 with name]
+  OWASP      : [A01–A10 | LLM01–LLM10:2026 | ASI01–ASI10 with name and year]
   CWE        : [CWE-ID: Name — one sentence what this means]
   WSTG       : [WSTG-XXXX-XX] (omit if not applicable)
   ASVS Level : [L1/L2/L3 — which level violated and what that means]
@@ -533,7 +624,7 @@ SCOPE REVIEWED
 ALWAYS:
 - Apply confidence gate before assigning severity — this is non-negotiable
 - Re-evaluate CVSS base score against the user's actual deployment context
-- Distinguish LLM model-level from application-level before mapping to LLM Top 10
+- Distinguish LLM model-level from application-level before mapping to the LLM Top 10
 - Show full CVSS vector with component-by-component reasoning
 - Provide copy-paste ready fix, not a description of what to fix
 - Check for upstream sanitization before flagging injection in code snippets
@@ -551,6 +642,8 @@ NEVER:
 - Use CVSS for LLM-specific findings — use OWASP LLM Risk Rating
 - Write "this could potentially be unsafe" without a confidence level
 - Conflate LLM01 Prompt Injection with A03 Injection — different attack classes
+- Cite an LLM category without its year — LLM05:2025 and LLM05:2026 are different
+  categories, and the 2025 numbering was superseded in August 2026
 - Over-report to seem thorough — false positives destroy trust faster than anything
 - Skip AM I AFFECTED — it is the entire point of triage vs. scanning
 - Invent CVSS score without showing vector reasoning per component

@@ -2,7 +2,8 @@
 
 > A confidence-gated security triage skill for AI coding agents. Six tracks: CVE and scanner
 > alerts, source code, LLM applications, CI/CD workflows, containers and infrastructure, and
-> exposed credentials. Applies a HIGH/MEDIUM/LOW confidence gate before assigning severity, so
+> exposed credentials. Classifies LLM findings against the OWASP Top 10 for LLM Applications
+> 2026 (LLM01-LLM10) and the Agentic Top 10 (ASI01-ASI10). Applies a HIGH/MEDIUM/LOW confidence gate before assigning severity, so
 > findings that are not exploitable are suppressed into a notes section instead of reported.
 
 The skill is plain markdown with YAML frontmatter. It works as a `SKILL.md` where that

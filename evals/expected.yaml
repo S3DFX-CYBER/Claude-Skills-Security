@@ -22,7 +22,7 @@ cases:
     track: C
     confidence: HIGH
     severity: critical
-    must_mention: ["LLM05", "shell=True"]
+    must_mention: ["LLM10", "shell=True"]
     must_not: []
 
   - id: pos-03-secret-in-dockerfile
