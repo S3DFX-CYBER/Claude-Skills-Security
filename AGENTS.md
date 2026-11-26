@@ -12,13 +12,13 @@ and any agent runtime that reads AGENTS.md for capability discovery.
 
 ### security-triage
 
-**File:** `Claude Skills/Security-Triage-Skills.md`
-**Version:** 1.1.0
+**File:** `skills/security-triage/SKILL.md`
+**Version:** 1.2.1
 **Type:** Triage methodology / system prompt skill
 
-A confidence-gated security triage skill for AI agents. Covers 5 tracks:
+A confidence-gated security triage skill for AI agents. Covers 6 tracks:
 CVE analysis, code review, LLM application security, CI/CD hardening,
-and container/infrastructure review.
+container/infrastructure review, and secrets exposure.
 
 **When to invoke:**
 - User pastes a CVE ID, scanner output (Snyk, Dependabot, Trivy, SARIF), or audit report
@@ -26,6 +26,7 @@ and container/infrastructure review.
 - User pastes a GitHub Actions workflow file
 - User pastes a Dockerfile, docker-compose.yml, or k8s YAML
 - User asks about prompt injection, LLM security, RAG pipelines, or AI agents
+- User pastes scanner output naming a leaked key, a committed .env, or a token in a bundle
 - User asks "is this safe?", "is this vulnerable?", or "what's the risk here?"
 
 **When NOT to invoke:**
@@ -157,6 +158,10 @@ Input contains .github/workflows/*.yml or CI config
 
 Input contains Dockerfile, docker-compose.yml, k8s YAML, Helm chart
 → Route to Track E: Container & Infrastructure
+
+Input contains gitleaks/trufflehog output, a committed .env, a key-shaped string,
+or a token in a client bundle / source map
+→ Route to Track F: Secrets & Credential Exposure
 ```
 
 Multiple tracks can be active simultaneously. Classify ALL applicable tracks
@@ -179,6 +184,12 @@ CVSS maps poorly to LLM application layer vulnerabilities.
 
 ---
 
+## Evals
+
+`evals/` holds 12 labelled cases — 6 vulnerabilities, 6 false-positive traps — with
+`expected.yaml` as ground truth. Run the protocol in `evals/README.md` after any change to
+the gate, and re-publish the score. Do not publish a number you have not measured.
+
 ## Version History
 
 See [CHANGELOG.md](CHANGELOG.md)
@@ -189,14 +200,27 @@ See [CHANGELOG.md](CHANGELOG.md)
 
 ```
 Claude-Skills-Security/
-├── Claude Skills/
-│   └── Security-Triage-Skills.md   # Core skill file
+├── skills/
+│   └── security-triage/
+│       └── SKILL.md                 # Canonical skill — the only file you edit
 ├── .claude/
 │   └── skills/
-│       └── security-triage.md      # Claude Code symlink/copy
+│       └── security-triage/
+│           └── SKILL.md             # Generated mirror (make sync) — do not edit
+├── img/                             # banner and gate diagrams
+├── install.sh                       # universal installer, 12 targets
+├── llms.txt                         # machine-readable repo index
+├── examples/                        # Three input/output pairs
+├── evals/                           # 12-case labelled corpus + protocol
+├── .github/
+│   ├── workflows/validate.yml       # Drift, frontmatter, corpus checks
+│   └── ISSUE_TEMPLATE/              # bug, false positive, new track
 ├── AGENTS.md                        # This file — agentic discovery
 ├── CHANGELOG.md                     # Version history
 ├── COMPATIBILITY.md                 # Runtime compatibility details
+├── CONTRIBUTING.md                  # How to improve the methodology
+├── SECURITY.md                      # Reporting issues in the skill itself
+├── Makefile                         # make sync / make check
 ├── LICENSE                          # MIT
 └── README.md                        # Human-readable docs
 ```

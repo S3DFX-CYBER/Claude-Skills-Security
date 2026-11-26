@@ -14,7 +14,7 @@ Secondary: Any runtime — the methodology is model-agnostic.
 
 1. Open a Claude Project
 2. Go to Project Instructions
-3. Paste the full contents of `Claude Skills/Security-Triage-Skills.md`
+3. Paste the full contents of `skills/security-triage/SKILL.md`
 4. The skill is now active for all conversations in that project
 
 ### Claude Code — Agentic
@@ -22,9 +22,9 @@ Secondary: Any runtime — the methodology is model-agnostic.
 ```bash
 # Clone and wire to your project
 git clone https://github.com/S3DFX-CYBER/Claude-Skills-Security.git
-mkdir -p /your/project/.claude/skills/
-cp "Claude-Skills-Security/Claude Skills/Security-Triage-Skills.md" \
-   /your/project/.claude/skills/security-triage.md
+mkdir -p /your/project/.claude/skills/security-triage/
+cp "Claude-Skills-Security/skills/security-triage/SKILL.md" \
+   /your/project/.claude/skills/security-triage/SKILL.md
 ```
 
 Claude Code agents will discover the skill via `.claude/skills/` on startup.
@@ -34,7 +34,7 @@ Claude Code agents will discover the skill via `.claude/skills/` on startup.
 ```python
 import anthropic
 
-with open("Claude Skills/Security-Triage-Skills.md") as f:
+with open("skills/security-triage/SKILL.md") as f:
     skill = f.read()
 
 client = anthropic.Anthropic()
@@ -55,7 +55,7 @@ message = client.messages.create(
 ```python
 from openai import OpenAI
 
-with open("Claude Skills/Security-Triage-Skills.md") as f:
+with open("skills/security-triage/SKILL.md") as f:
     skill = f.read()
 
 client = OpenAI()
@@ -89,7 +89,7 @@ Create `.cursorrules` in your project root:
 You are operating with the Security Triage Skill active.
 
 Follow the triage methodology defined in:
-https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/Claude%20Skills/Security-Triage-Skills.md
+https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/skills/security-triage/SKILL.md
 
 Key rules:
 - Apply the confidence gate (HIGH/MEDIUM/LOW) before every finding
@@ -126,7 +126,7 @@ Create `.github/copilot-instructions.md`:
 
 When reviewing code, workflow files, Dockerfiles, or dependencies for security issues,
 apply the confidence-gated triage methodology from:
-Claude-Skills-Security/Claude Skills/Security-Triage-Skills.md
+Claude-Skills-Security/skills/security-triage/SKILL.md
 
 Confidence gate:
 - HIGH: pattern confirmed + attacker input path confirmed + exploitable in context
@@ -142,12 +142,12 @@ Output format: structured triage report (FINDING / AM I AFFECTED / IMPACT / THE 
 
 ```bash
 # Single invocation
-gemini -s "$(cat 'Claude Skills/Security-Triage-Skills.md')" \
+gemini -s "$(cat 'skills/security-triage/SKILL.md')" \
   "Triage this GitHub Actions workflow:\n\n$(cat .github/workflows/ci.yml)"
 
 # As a shell function
 triage() {
-  local skill="$(cat '/path/to/Claude Skills/Security-Triage-Skills.md')"
+  local skill="$(cat '/path/to/skills/security-triage/SKILL.md')"
   gemini -s "$skill" "Triage this: $1"
 }
 
@@ -164,7 +164,7 @@ triage "CVE-2024-21536 — is this affecting my Express app?"
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage
 
-with open("Claude Skills/Security-Triage-Skills.md") as f:
+with open("skills/security-triage/SKILL.md") as f:
     skill = f.read()
 
 llm = ChatAnthropic(model="claude-sonnet-4-20250514")
@@ -186,7 +186,7 @@ def triage_node(state):
 from crewai import Agent, Task
 from langchain_anthropic import ChatAnthropic
 
-with open("Claude Skills/Security-Triage-Skills.md") as f:
+with open("skills/security-triage/SKILL.md") as f:
     skill = f.read()
 
 security_researcher = Agent(
@@ -214,7 +214,7 @@ The skill works as a `system` message with any OpenAI-compatible endpoint
 ```python
 import openai
 
-with open("Claude Skills/Security-Triage-Skills.md") as f:
+with open("skills/security-triage/SKILL.md") as f:
     skill = f.read()
 
 client = openai.OpenAI(
@@ -248,3 +248,53 @@ Recommended: Claude Sonnet, GPT-4o, Gemini 1.5 Pro, or equivalent.
 | CVSS construction accuracy | High | High | Medium | High | Variable |
 | Confidence gate reliability | High | High | Medium | High | Variable |
 | Recommended for prod triage | ✅ | ✅ | ⚠️ review output | ✅ | ⚠️ test first |
+
+---
+
+## Other Agents and Tools
+
+Everything in this table uses the same artifact: the markdown body of
+`skills/security-triage/SKILL.md`, frontmatter stripped. `./install.sh <target>` writes it
+in the right place.
+
+| Tool | Target | Mechanism |
+|---|---|---|
+| Cursor | `./install.sh cursor` | `.cursor/rules/*.mdc`, `alwaysApply: false` |
+| Windsurf | `./install.sh windsurf` | `.windsurf/rules/` |
+| Continue | `./install.sh continue` | `.continue/rules/` |
+| GitHub Copilot | `./install.sh copilot` | `.github/copilot-instructions.md` |
+| Codex / OpenAI agents | `./install.sh codex` | `AGENTS.md` |
+| Gemini CLI | `./install.sh gemini` | `GEMINI.md` |
+| Aider | `./install.sh aider` | `CONVENTIONS.md` via `--read` |
+| Cline | `./install.sh cline` | `.clinerules` |
+| Zed | `./install.sh zed` | `.rules` |
+| Any other tool | `./install.sh print` | stdout — pipe into a system prompt |
+
+```bash
+# Anything that takes a system prompt or a prompt file
+./install.sh print > /tmp/security-triage.md
+your-agent --system-prompt /tmp/security-triage.md "triage this Dockerfile: $(cat Dockerfile)"
+
+# Anything that takes a single concatenated prompt
+your-agent "$(./install.sh print)"$'
+
+'"$(cat .github/workflows/deploy.yml)"
+```
+
+### What actually travels
+
+Two things matter across runtimes, and neither is the file format:
+
+1. **The gate must survive.** A runtime that truncates context or summarises the system prompt
+   will drop the LOW-suppression rule first, because it reads as a restriction. If you see
+   findings reported without a confidence level, the gate was lost — shorten what you paste
+   to the gate, the track definitions and the report format.
+2. **Output format is per-runtime.** The box-drawing characters in the report template render
+   inconsistently in some UIs. The structure is what matters, not the glyphs; tell the agent to
+   keep the section order if your client mangles the borders.
+
+### Local models
+
+The gate and the structured output both depend on instruction-following. Below roughly 13B
+parameters, expect the gate to be skipped and the report to be flattened. Test with
+`evals/` before trusting a small model in a review path.

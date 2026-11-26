@@ -1,19 +1,27 @@
 ---
 name: security-triage
-version: 1.1.0
 description: >
-  Confidence-gated security triage across 5 tracks: CVE analysis, code review,
-  LLM application security, CI/CD hardening, and container/infrastructure.
-  Applies HIGH/MEDIUM/LOW confidence gate before severity assignment.
-  Produces structured triage reports with copy-paste fixes and verification steps.
-tracks:
-  - A: CVE / Scanner Alert
-  - B: Code Snippet
-  - C: LLM Application Security
-  - D: CI/CD & GitHub Actions
-  - E: Container & Infrastructure
-author: S3DFX-CYBER
+  Confidence-gated security triage for CVE alerts, code snippets, LLM applications,
+  GitHub Actions workflows, container and infrastructure config, and exposed
+  credentials. Applies a HIGH/MEDIUM/LOW gate before assigning severity, so false
+  positives are suppressed rather than reported.
+when_to_use: >
+  Use when the user pastes a CVE ID, Dependabot/Snyk/Trivy/npm audit/pip-audit/SARIF
+  output, source code with a question about exploitability, a .github/workflows/*.yml
+  file, a Dockerfile or docker-compose or k8s manifest, a prompt/RAG/agent
+  implementation, or scanner output naming a leaked key - and asks "is this
+  exploitable", "is this safe", "what is the real risk", or "how do I fix this".
 license: MIT
+metadata:
+  version: 1.2.0
+  author: S3DFX-CYBER
+  tracks:
+    - A: CVE / Scanner Alert
+    - B: Code Snippet
+    - C: LLM Application Security
+    - D: CI/CD & GitHub Actions
+    - E: Container & Infrastructure
+    - F: Secrets & Credential Exposure
 ---
 
 # Security Triage Skill
@@ -92,7 +100,38 @@ Key questions:
 - Django templates auto-escape by default; `mark_safe(user_input)` is the danger
 - `innerHTML = serverConfig` ≠ XSS; `innerHTML = req.body.input` = XSS
 
-**Track C — LLM Application Security**
+**Track C### Track B - per-language sink tables
+
+Do not guess whether a call is dangerous. Match it against these, then check upstream
+sanitisation before assigning HIGH.
+
+| Language | Dangerous sink | Safe counterpart |
+|---|---|---|
+| JS / TS | `innerHTML`, `outerHTML`, `document.write`, `eval`, `new Function`, `setTimeout("str")` | `textContent`, `JSON.parse`, function reference |
+| JS / TS (server) | `child_process.exec`, `execSync`, `spawn` with `shell: true` | `execFile(bin, [args])`, `spawn` without shell |
+| Python | `eval`, `exec`, `os.system`, `subprocess.*(shell=True)`, `pickle.loads`, `yaml.load` without Loader | `ast.literal_eval`, `yaml.safe_load`, `subprocess.run([...])` |
+| Python (web) | `cursor.execute(f"...{x}")`, `mark_safe(user_input)`, `render_template_string(user)` | parameterised query, `format_html`, template file |
+| Java | `Runtime.exec`, `ProcessBuilder` with shell, `Statement.execute(sql+input)`, `ObjectInputStream.readObject` | `PreparedStatement`, allowlist `ObjectInputFilter` |
+| Go | `exec.Command("sh", "-c", x)`, `text/template` unescaped into HTML, `unsafe.Pointer` arithmetic | `exec.Command(bin, args...)`, `html/template` |
+| PHP | `eval`, `include $var`, `unserialize`, `system` / `shell_exec`, `extract($_GET)` | `include` from a fixed map, `json_decode` |
+| Ruby | `eval`, `send(params[:m])`, `system("...#{x}")`, `YAML.load` | `public_send` on an allowlist, `YAML.safe_load` |
+| Rust | `Command::new("sh").arg("-c")`, `unsafe { from_raw_parts }`, `std::mem::transmute` | typed `Command` args, bounds-checked slicing |
+| SQL (any) | concatenation or an f-string inside a query | bound parameters, ORM query builder |
+
+Two rules override the table:
+
+- **A dangerous sink fed by a constant is not a finding.** `os.system("ls -la")` is code
+  quality, not a vulnerability. Report it only if a variable reaches it.
+- **In Go, `text/template` vs `html/template` decides whether escaping happens — it does not
+  by itself decide whether XSS is possible.** `text/template` performs no escaping, but XSS
+  also needs the rendered output to land in an HTML context:
+  - `text/template` + user data + output rendered into an HTML response → XSS, HIGH.
+  - `text/template` + user data + output to a log, email body, CSV or CLI → not XSS. Assess
+    the sink that actually consumes it (log injection, CSV injection, the downstream parser).
+  - User-controlled *template source*, in either package → template injection (CWE-1336),
+    HIGH regardless of output context: the attacker is writing template expressions.
+
+ — LLM Application Security**
 Prompt injection, LLM app code, RAG pipeline, AI agent with tools,
 system prompt review, LLM output handling, vector DB setup.
 
@@ -237,6 +276,51 @@ Check in this order:
 
 ---
 
+**Track F - Secrets & Credential Exposure**
+gitleaks / trufflehog output, a committed `.env`, keys in source, tokens in client bundles
+or source maps, credentials in build logs.
+
+The finding is never "a secret-shaped string exists." The finding is "this credential is
+live and its blast radius is X." A revoked test key and a live `AKIA` key are the same
+string and not the same finding.
+
+Check in this order:
+
+1. **Real or placeholder?** `sk_live_` vs `sk_test_`, `AKIA` + 16 uppercase alnum,
+   `ghp_` / `github_pat_`, `xoxb-`, a `-----BEGIN PRIVATE KEY-----` block, a JWT with a
+   decodable payload, or a 32+ char high-entropy string beside a name like `_KEY`,
+   `_TOKEN`, `_SECRET`.
+2. **Live or dead?** Do not assume. If you cannot verify, say so and triage as if live -
+   the cost asymmetry is total.
+3. **Where does it reach?** Client-side bundle or source map (anyone can read it, no auth
+   needed) > public repo > build log > private CI variable. Reaching a browser bundle
+   means it is already public.
+4. **Blast radius.** The scope of the credential, not its type. A read-only S3 key, a
+   full-account `AdministratorAccess` key, and a Stripe restricted key are three
+   different severities.
+
+HIGH confidence if: real credential + reaches a public surface (repo, bundle, log) + not
+demonstrably revoked.
+MEDIUM if: real credential in a private repo or private CI variable, or reachability unclear.
+
+Fix order is not negotiable - **rotate first, then remove**:
+
+1. Revoke or rotate at the provider. This is the only step that stops the bleeding;
+   rewriting history does not un-leak a key that has already been scraped.
+2. Remove it from the current tree.
+3. Purge history if the repo is public (`git filter-repo`, force-push, then invalidate
+   forks - say plainly that existing forks and clones may retain it).
+4. Prevent recurrence: pre-commit hook (`gitleaks protect --staged`), CI secret scan,
+   `.gitignore` entry, and push protection at the provider.
+
+Verify: confirm the old credential now fails at the provider (a revoked key returns 401 or
+`InvalidClientTokenId`). Deleting the line in git is not verification.
+
+Note: for Track F, C/I/A impact is the wrong frame. Rate the blast radius, and state
+explicitly whether the credential was live at the time you looked.
+
+---
+
 ## Step 3 — CVSS 3.1 Construction
 
 Always construct the full vector: `CVSS:3.1/AV:_/AC:_/PR:_/UI:_/S:_/C:_/I:_/A:_`
@@ -323,11 +407,47 @@ VERIFY IT'S FIXED
   [One specific, runnable check — a grep, command, test assertion,
   or concrete review checklist item.]
 
+BLIND SPOTS
+  [What you could not see that would change this verdict — the caller, the proxy
+  config, whether the endpoint is internet-reachable, whether the dependency is
+  actually invoked. Required on every report, including clean results.
+  If nothing is blind, write "None identified — full path visible."]
+
 REFERENCES
   [3–5 links. Only directly relevant ones.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
+
+---
+
+## Step 5 - Action Mapping and Disclosure
+
+A triage report ends with a fix. The work continues. Always close with an action line so
+the reader knows what to do on Monday.
+
+```
+🔴 Critical  Fix before the next deploy. If a credential is exposed, rotate it now,
+            ahead of the code change.
+🟠 High      Fix this sprint. Add a regression test that fails on the old pattern.
+🟡 Medium    Next sprint, or accept with a written rationale in the code comment.
+🔵 Low       Backlog. Do not block a release on it.
+```
+
+**If the vulnerable code is yours:** the action line above is the whole answer.
+
+**If the vulnerable code is third-party:** add the reporting path.
+
+1. Report privately - `security@<vendor>` or the repo's `SECURITY.md`. Never a public issue.
+2. Ask the maintainer to open a GitHub Security Advisory, or request a CVE from the CNA.
+3. State your disclosure window. 90 days is the common default; agree a shorter one if the
+   issue is being exploited.
+4. If the project is unmaintained, the mitigation is yours to implement - pin, patch,
+   vendor, or remove the dependency.
+
+**Interim mitigation.** Every report should answer "what do I do in the next hour, before
+the fix ships?" Disable the feature, add a WAF rule, drop the capability, restrict the
+endpoint, or pull the workflow file. A fix that ships next sprint is not a mitigation today.
 
 ---
 
@@ -382,6 +502,32 @@ Degrade gracefully — if MCP unavailable, ask user to paste relevant files.
 
 ---
 
+## Repo-Scale Mode
+
+Pasting a snippet does not scale to a repository. When the input is a whole repo or a large
+diff, work like this:
+
+1. **Diff-first.** Audit the changed files first - new code carries the new bugs. Only widen
+   to the full tree when the user asks for it.
+2. **One track at a time.** Never sweep all six tracks in one pass. Tracks A, D and F are
+   cheap and mechanical; B and C need depth. Do the cheap sweep, then go deep.
+3. **Cap per-file context.** If a file exceeds what you can read carefully, triage its entry
+   points and sinks only, and say which files you skipped.
+4. **Publish the manifest.** Every repo-scale report opens with what was and was not reviewed:
+
+```
+SCOPE REVIEWED
+  Files read in full     : 14 of 231
+  Files pattern-screened : 231 of 231
+  Not reviewed           : vendored/, migrations/, generated clients
+  Tracks applied         : A (all), D (all), F (all), B (entry points only)
+```
+
+5. **Never imply coverage you did not have.** "No findings" over 14 of 231 files is a
+   different statement from "no findings" over 231. Write the number.
+
+---
+
 ## Hard Rules
 
 ALWAYS:
@@ -392,7 +538,14 @@ ALWAYS:
 - Provide copy-paste ready fix, not a description of what to fix
 - Check for upstream sanitization before flagging injection in code snippets
 - Treat pull_request_target as dangerous until proven otherwise
+- Report the BLIND SPOTS line on every report, including clean results
+- State the action line (Critical/High/Medium/Low → what to do) before the fix detail
+- For Track F: rotate first, then remove; never present history rewriting as the fix
+- State how many files you actually read in repo-scale mode
 
+NEVER:
+- Call a dangerous sink fed by a constant a vulnerability
+- Present a revoked or unverifiable credential as a live exposure without saying so
 NEVER:
 - Report LOW confidence issues as security findings
 - Use CVSS for LLM-specific findings — use OWASP LLM Risk Rating

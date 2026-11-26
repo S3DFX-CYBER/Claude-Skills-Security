@@ -1,0 +1,44 @@
+# security-triage
+
+> A confidence-gated security triage skill for AI coding agents. Six tracks: CVE and scanner
+> alerts, source code, LLM applications, CI/CD workflows, containers and infrastructure, and
+> exposed credentials. Applies a HIGH/MEDIUM/LOW confidence gate before assigning severity, so
+> findings that are not exploitable are suppressed into a notes section instead of reported.
+
+The skill is plain markdown with YAML frontmatter. It works as a `SKILL.md` where that
+convention exists (Claude Code, claude.ai, plugin runtimes) and as a system prompt or rules
+file everywhere else. Nothing to compile, no network access, no dependencies.
+
+What makes it different from a scanner or a generic "act as a security expert" prompt: every
+finding must survive a three-part gate — vulnerable pattern confirmed, attacker-controlled
+input confirmed, exploitable in the stated context. Anything that fails is not reported as a
+finding. Output is a fixed structure: FINDING, CLASSIFICATION, WHAT IS THIS, AM I AFFECTED,
+IMPACT, BLIND SPOTS, THE FIX (as a diff), VERIFY IT'S FIXED, REFERENCES, ACTION.
+
+## Skill
+
+- [SKILL.md](https://raw.githubusercontent.com/S3DFX-CYBER/Claude-Skills-Security/main/skills/security-triage/SKILL.md): the complete methodology — confidence gate, six tracks, per-language sink tables, CVSS 3.1 construction, report format, action mapping and disclosure path, repo-scale mode
+
+## Docs
+
+- [README.md](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/README.md): what it is, the gate, install for every runtime
+- [AGENTS.md](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/AGENTS.md): agent discovery, invocation contract, track routing, GitHub MCP workflow
+- [COMPATIBILITY.md](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/COMPATIBILITY.md): per-runtime configuration and local model guidance
+- [install.sh](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/install.sh): universal installer — `./install.sh claude|cursor|codex|copilot|gemini|aider|cline|zed|continue|print`
+
+## Examples
+
+- [examples/02-false-positive/output.md](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/examples/02-false-positive/output.md): six scanner flags, zero findings, with the reason for each — the most useful single file for understanding the gate
+- [examples/01-ci-cd-rce/output.md](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/examples/01-ci-cd-rce/output.md): a full HIGH-confidence report on a `pull_request_target` workflow
+- [examples/03-llm-rag/output.md](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/examples/03-llm-rag/output.md): three Track C findings with a summary table
+
+## Evals
+
+- [evals/README.md](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/evals/README.md): protocol for scoring the skill — recall, false-positive rate, track accuracy, severity agreement
+- [evals/expected.yaml](https://raw.githubusercontent.com/S3DFX-CYBER/Claude-Skills-Security/main/evals/expected.yaml): ground truth for 12 labelled cases, 6 positive and 6 negative
+
+## Optional
+
+- [CHANGELOG.md](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/CHANGELOG.md): version history
+- [CONTRIBUTING.md](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/CONTRIBUTING.md): how to report a false positive or a false negative
+- [SECURITY.md](https://github.com/S3DFX-CYBER/Claude-Skills-Security/blob/main/SECURITY.md): reporting problems with the skill itself

@@ -1,0 +1,90 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned to a commit SHA — mutable tags are how actions get compromised.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Skill copies are identical
+        run: |
+          if ! diff -q skills/security-triage/SKILL.md .claude/skills/security-triage/SKILL.md; then
+            echo "::error::Generated copy has drifted. Run 'make sync' and commit."
+            diff skills/security-triage/SKILL.md .claude/skills/security-triage/SKILL.md
+            exit 1
+          fi
+
+      - name: Frontmatter parses and required fields present
+        run: |
+          python3 - <<'PY'
+          import pathlib, sys, yaml
+          p = pathlib.Path("skills/security-triage/SKILL.md")
+          text = p.read_text()
+          if not text.startswith("---\n"):
+              sys.exit("SKILL.md must start with YAML frontmatter on line 1")
+          fm = yaml.safe_load(text.split("---")[1])
+          for field in ("name", "description"):
+              if not fm.get(field):
+                  sys.exit(f"missing frontmatter field: {field}")
+          allowed = {"name","description","when_to_use","argument-hint","arguments",
+                     "disable-model-invocation","user-invocable","allowed-tools",
+                     "disallowed-tools","model","effort","context","agent","background",
+                     "hooks","paths","shell","metadata","license","compatibility"}
+          unknown = set(fm) - allowed
+          if unknown:
+              sys.exit(f"frontmatter fields Claude Code ignores: {sorted(unknown)}")
+          desc = (fm.get("description") or "") + (fm.get("when_to_use") or "")
+          if len(desc) > 1536:
+              sys.exit(f"description+when_to_use is {len(desc)} chars, truncated at 1536")
+          print(f"frontmatter ok — {len(desc)} chars of trigger text")
+          PY
+
+      - name: Eval corpus matches expected.yaml
+        run: |
+          python3 - <<'PY'
+          import pathlib, sys, yaml
+          root = pathlib.Path("evals")
+          expected = {c["id"] for c in yaml.safe_load((root/"expected.yaml").read_text())["cases"]}
+          present = {d.name for d in (root/"cases").iterdir() if d.is_dir()}
+          if expected != present:
+              sys.exit(f"mismatch — only in expected.yaml: {expected-present}; "
+                       f"only on disk: {present-expected}")
+          for d in (root/"cases").iterdir():
+              if not list(d.glob("artifact.*")):
+                  sys.exit(f"{d.name} has no artifact")
+          pos = sum(1 for c in yaml.safe_load((root/"expected.yaml").read_text())["cases"] if c["finding"])
+          print(f"eval corpus ok — {len(expected)} cases, {pos} positive, {len(expected)-pos} negative")
+          PY
+
+      - name: No stale paths in docs
+        run: |
+          if grep -rn "Claude Skills/" --include="*.md" --exclude=CHANGELOG.md .; then
+            echo "::error::Stale path 'Claude Skills/' — the skill lives at skills/security-triage/"
+            exit 1
+          fi
+          if grep -rn "\.claude/skills/security-triage\.md" --include="*.md" --exclude=CHANGELOG.md .; then
+            echo "::error::Stale path — Claude Code needs a directory containing SKILL.md"
+            exit 1
+          fi
+
+      - name: Installer works for every documented target
+        run: |
+          sh -n install.sh
+          tmp=$(mktemp -d)
+          ( cd "$tmp" && "$GITHUB_WORKSPACE/install.sh" claude )
+          cmp skills/security-triage/SKILL.md "$tmp/.claude/skills/security-triage/SKILL.md"
+          ( cd "$tmp" && "$GITHUB_WORKSPACE/install.sh" cursor )
+          head -1 "$tmp/.cursor/rules/security-triage.mdc" | grep -qx -- '---'
+          ( cd "$tmp" && "$GITHUB_WORKSPACE/install.sh" codex )
+          grep -q "Confidence Gate" "$tmp/AGENTS.md"
+          "$GITHUB_WORKSPACE/install.sh" print | grep -q "Confidence Gate"
+          echo "installer ok"
